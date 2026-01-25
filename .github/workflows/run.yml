@@ -1,10 +1,32 @@
-name: test workflow
+name: ETF Telegram Report
 
 on:
+  schedule:
+    - cron: '30 6 * * 1-5'   # 평일 15:30 KST (UTC 06:30)
+  workflow_dispatch:
   push:
 
 jobs:
-  test:
+  run-etf-report:
     runs-on: ubuntu-latest
+
     steps:
-      - run: echo "Hello ETF Bot"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests pandas pykrx
+
+      - name: Run ETF report
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          python Jonghak_ETF_Telegram.py
