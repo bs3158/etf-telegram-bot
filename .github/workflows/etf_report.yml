@@ -2,13 +2,16 @@ name: ETF Telegram Report
 
 on:
   schedule:
-    # 평일 월~금, UTC 06:30 → KST 15:30
-    - cron: '30 6 * * 1-5'
-  workflow_dispatch:  # 수동 실행 버튼도 추가
+    - cron: '30 6 * * 1-5'  # 평일 15:30 KST
+  workflow_dispatch:
 
 jobs:
   run-etf-report:
     runs-on: ubuntu-latest
+
+    env:
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+      CHAT_ID: ${{ secrets.CHAT_ID }}
 
     steps:
       - name: Checkout repository
