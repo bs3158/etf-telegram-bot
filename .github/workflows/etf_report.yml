@@ -26,4 +26,4 @@ jobs:
 
       - name: Run ETF report
         run: |
-          python etf_telegram.py
+          python Jonghak_ETF_Telegram.py
