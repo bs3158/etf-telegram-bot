@@ -29,3 +29,4 @@ jobs:
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: |
           python Jonghak_ETF_Telegram.py
+          python Pension_ETF_Telegram.py
