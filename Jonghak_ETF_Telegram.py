@@ -52,7 +52,7 @@ def run_report():
     total_now = 0
     lines = []
 
-    lines.append("📊 ETF 포트폴리오 리포트")
+    lines.append("📊 김종학 용돈 ETF 포트폴리오 리포트")
     time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     lines.append(f"🕒 {time_str}")
 
@@ -98,4 +98,5 @@ def run_report():
 # =========================
 if __name__ == "__main__":
     run_report()
+
 
