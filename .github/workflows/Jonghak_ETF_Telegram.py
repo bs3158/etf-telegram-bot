@@ -2,12 +2,14 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import time
+import os
 
 # =========================
 # 텔레그램 설정
 # =========================
-BOT_TOKEN = "8218610510:AAELuynXvDvAXGaS8owhR77v79GH3TG94M4"
-CHAT_ID = "43643771"
+BOT_TOKEN = os.environ["BOT_TOKEN"]
+CHAT_ID = os.environ["CHAT_ID"]
+
 
 # =========================
 # 포트폴리오
@@ -96,3 +98,4 @@ def run_report():
 # =========================
 if __name__ == "__main__":
     run_report()
+
