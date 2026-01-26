@@ -40,6 +40,7 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add data/last_snapshot.json
+          git add data/snapshot_jonghak.json
+          git add data/snapshot_pension.json
           git commit -m "Update ETF snapshot" || echo "No changes"
           git push
