@@ -38,11 +38,11 @@ portfolio = [
     {"account": "IRP", "name": "TIGER 미국 배당 다우존스", "code": "458730", "qty": 84, "buy": 13100},
 
     # 개인연금
-    {"account": "PENSION", "name": "TIGER KRX 금현물", "code": "0072R0", "qty": 197, "buy": 12211},
-    {"account": "PENSION", "name": "KIWOOM 국고채10년", "code": "148070", "qty": 15, "buy": 113824},
-    {"account": "PENSION", "name": "KODEX 200TR", "code": "278530", "qty": 153, "buy": 19754},
-    {"account": "PENSION", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 128, "buy": 23556},
-    {"account": "PENSION", "name": "ACE 미국달러SOFR금리(합성)", "code": "456880", "qty": 144, "buy": 11863},
+    {"account": "개인연금", "name": "TIGER KRX 금현물", "code": "0072R0", "qty": 197, "buy": 12211},
+    {"account": "개인연금", "name": "KIWOOM 국고채10년", "code": "148070", "qty": 15, "buy": 113824},
+    {"account": "개인연금", "name": "KODEX 200TR", "code": "278530", "qty": 153, "buy": 19754},
+    {"account": "개인연금", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 128, "buy": 23556},
+    {"account": "개인연금", "name": "ACE 미국달러SOFR금리(합성)", "code": "456880", "qty": 144, "buy": 11863},
 
     # ISA
     {"account": "ISA", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 6, "buy": 25045},
@@ -257,3 +257,4 @@ def run_report():
 # =========================
 if __name__ == "__main__":
     run_report()
+
