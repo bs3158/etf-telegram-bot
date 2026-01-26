@@ -2,7 +2,7 @@ name: ETF Telegram Bot
 
 on:
   schedule:
-    - cron: "22 7 * * 1-5"   # 평일 한국 15:30 (UTC 06:30)
+    - cron: "30 6 * * 1-5"   # 평일 한국 15:30 (UTC 06:30)
   workflow_dispatch:
 
 jobs:
