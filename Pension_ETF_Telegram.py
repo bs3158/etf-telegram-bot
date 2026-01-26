@@ -17,7 +17,10 @@ CHAT_ID = os.environ["CHAT_ID"]
 # =========================
 TAX_REFUND = 1_188_000  # 13.2% 기준 환급액
 
-SNAPSHOT_FILE = "snapshot_pension.json"
+DATA_DIR = "data"
+os.makedirs(DATA_DIR, exist_ok=True)
+
+SNAPSHOT_FILE = os.path.join(DATA_DIR, "snapshot_pension.json")
 
 # =========================
 # 포트폴리오
@@ -197,3 +200,4 @@ def run_report():
 
 if __name__ == "__main__":
     run_report()
+
