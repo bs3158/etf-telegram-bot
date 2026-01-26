@@ -47,6 +47,113 @@ portfolio = [
 # 현재가 조회
 # =========================
 def get_current_price(code):
+    try:
+        url = f"https://finance.naver.com/item/main.naver?code={code}"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        res = requests.get(url, headers=headers, timeout=10)
+        soup = BeautifulSoup(res.text, "html.parser")
+        price = soup.select_one("p.no_today span.blind")
+        return int(price.text.replace(",", ""))
+    except:
+        return 0
+
+# =========================
+# 텔레그램 전송 함수
+# =========================
+def send_telegram(text):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    requests.post(url, data={"chat_id": CHAT_ID, "text": text}, timeout=10)
+
+def send_telegram_photo(path, caption=None):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+    with open(path, "rb") as f:
+        requests.post(url, data={"chat_id": CHAT_ID, "caption": caption}, files={"photo": f}, timeout=20)
+
+# =========================
+# 데이터 로드/저장
+# =========================
+def load_snapshot():
+    if not os.path.exists(SNAPSHOT_FILE): return {}
+    with open(SNAPSHOT_FILE, "r", encoding="utf-8") as f: return json.load(f)
+
+def save_snapshot(data):
+    with open(SNAPSHOT_FILE, "w", encoding="utf-8") as f: json.dump(data, f, ensure_ascii=False, indent=2)
+
+# =========================
+# 메인 로직
+# =========================
+def run_report():
+    prev_snapshot = load_snapshot()
+    today_snapshot = {}
+    
+    # 계좌 데이터 요약용
+    acc_summary = {"ISA": {"now": 0, "buy": 0}, "개인연금": {"now": 0, "buy": 0}, "IRP": {"now": 0, "buy": 0}}
+    
+    lines = ["📊 Portfolio Report", f"🕒 {datetime.now().strftime('%Y-%m-%d %H:%M')}", ""]
+
+    # 1. 데이터 집계
+    for item in portfolio:
+        curr_p = get_current_price(item["code"])
+        now_amt = curr_p * item["qty"]
+        buy_amt = item["buy"] * item["qty"]
+        
+        acc_summary[item["account"]]["now"] += now_amt
+        acc_summary[item["account"]]["buy"] += buy_amt
+        today_snapshot[f"{item['account']}_{item['code']}"] = now_amt
+        time.sleep(0.1)
+
+    # 2. 메시지 생성
+    for acc, data in acc_summary.items():
+        profit = data["now"] - data["buy"]
+        rate = (profit / data["buy"] * 100) if data["buy"] > 0 else 0
+        lines.append(f"📂 [{acc}]\n- Total: {data['now']:,} KRW\n- Profit: {profit:+,} ({rate:+.2f}%)")
+        lines.append("-" * 20)
+
+    send_telegram("\n".join(lines))
+
+    # 3. 그래프 생성 (영문 축 설정)
+    # X축 항목 순서 고정: ISA -> Pension -> IRP
+    display_names = ["ISA", "Pension", "IRP"]
+    mapping = {"ISA": "ISA", "Pension": "개인연금", "IRP": "IRP"}
+    
+    # 괄호 짝을 명확히 맞춘 리스트 생성
+    totals = [acc_summary[mapping[name]]["now"] for name in display_names]
+    profits = [acc_summary[mapping[name]]["now"] - acc_summary[mapping[name]]["buy"] for name in display_names]
+
+    fig, ax1 = plt.subplots(figsize=(8, 5))
+
+    # 왼쪽 Y축: Total
+    ax1.bar(display_names, totals, color='#66b3ff', alpha=0.7, label='Total')
+    ax1.set_ylabel('Total (KRW)', fontsize=12)
+    ax1.set_title('Total & Profit', fontsize=15)
+
+    # 오른쪽 Y축: Profit
+    ax2 = ax1.twinx()
+    ax2.plot(display_names, profits, color='#ff4d4d', marker='o', linewidth=2, label='Profit')
+    ax2.set_ylabel('Profit (KRW)', fontsize=12)
+
+    fig.tight_layout()
+    plt.savefig(GRAPH_FILE)
+    plt.close()
+
+    send_telegram_photo(GRAPH_FILE, caption="📊 Performance: Total & Profit")
+    save_snapshot(today_snapshot)
+
+if __name__ == "__main__":
+    run_report()
+    {"account": "개인연금", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 128, "buy": 23556},
+    {"account": "개인연금", "name": "ACE 미국달러SOFR금리(합성)", "code": "456880", "qty": 144, "buy": 11863},
+
+    # ISA
+    {"account": "ISA", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 6, "buy": 25045},
+    {"account": "ISA", "name": "TIGER 미국나스닥100", "code": "133690", "qty": 2, "buy": 164130},
+    {"account": "ISA", "name": "TIGER 200", "code": "102110", "qty": 3, "buy": 70510},
+]
+
+# =========================
+# 현재가 조회
+# =========================
+def get_current_price(code):
     url = f"https://finance.naver.com/item/main.naver?code={code}"
     headers = {"User-Agent": "Mozilla/5.0"}
     res = requests.get(url, headers=headers, timeout=10)
@@ -598,6 +705,7 @@ def run_report():
 # =========================
 if __name__ == "__main__":
     run_report()
+
 
 
 
