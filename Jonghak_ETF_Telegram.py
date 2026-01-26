@@ -29,7 +29,7 @@ portfolio = [
 ]
 
 # =========================
-# 네이버 금융 현재가
+# 네이버 금융 현재가 조회
 # =========================
 def get_current_price(code):
     url = f"https://finance.naver.com/item/main.naver?code={code}"
@@ -60,7 +60,7 @@ def load_snapshot():
         return json.load(f)
 
 # =========================
-# 스냅샷 저장
+# 스냅샷 저장 (종가 기준)
 # =========================
 def save_snapshot(total_now, total_profit):
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -95,6 +95,7 @@ def run_report():
 
     results = []
 
+    # 종목별 계산
     for item in portfolio:
         price = get_current_price(item["code"])
         qty = item["qty"]
@@ -116,7 +117,7 @@ def run_report():
             "rate": rate
         })
 
-        time.sleep(0.5)
+        time.sleep(0.5)  # 네이버 차단 방지
 
     # 종목별 출력 + 비중
     for r in results:
@@ -133,7 +134,7 @@ def run_report():
     total_profit = total_now - total_buy
     total_rate = total_profit / total_buy * 100
 
-    # 전일 대비
+    # 전일 대비 계산 (종가 기준)
     if snapshot:
         diff_profit = total_profit - snapshot["total_profit"]
         diff_emoji = "🔺" if diff_profit > 0 else "🔻" if diff_profit < 0 else "➖"
@@ -142,13 +143,17 @@ def run_report():
     lines.append("")
     lines.append("📈 전체 요약")
     lines.append(f"총 평가금액: {total_now:,}원")
-    lines.append(f"전체 수익률: {total_rate:+.2f}%")
     lines.append(f"전체 수익금: {total_profit:+,}원")
+    lines.append(f"전체 수익률: {total_rate:+.2f}%")
 
     send_telegram("\n".join(lines))
 
-    # 스냅샷 저장
-    save_snapshot(total_now, total_profit)
+    # =========================
+    # 종가 기준: 하루 1회만 스냅샷 저장
+    # =========================
+    today_str = today.strftime("%Y-%m-%d")
+    if not snapshot or snapshot.get("date") != today_str:
+        save_snapshot(total_now, total_profit)
 
 # =========================
 # 실행
