@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import time
 import os
+import json
 
 # =========================
 # 텔레그램 설정
@@ -10,6 +11,11 @@ import os
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
+# =========================
+# 경로 설정
+# =========================
+DATA_DIR = "data"
+SNAPSHOT_FILE = os.path.join(DATA_DIR, "last_snapshot.json")
 
 # =========================
 # 포트폴리오
@@ -23,7 +29,7 @@ portfolio = [
 ]
 
 # =========================
-# 네이버 금융 현재가 조회
+# 네이버 금융 현재가
 # =========================
 def get_current_price(code):
     url = f"https://finance.naver.com/item/main.naver?code={code}"
@@ -45,18 +51,49 @@ def send_telegram(text):
     requests.post(url, data={"chat_id": CHAT_ID, "text": text}, timeout=10)
 
 # =========================
+# 스냅샷 로드
+# =========================
+def load_snapshot():
+    if not os.path.exists(SNAPSHOT_FILE):
+        return None
+    with open(SNAPSHOT_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+# =========================
+# 스냅샷 저장
+# =========================
+def save_snapshot(total_now, total_profit):
+    os.makedirs(DATA_DIR, exist_ok=True)
+    data = {
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "total_now": total_now,
+        "total_profit": total_profit
+    }
+    with open(SNAPSHOT_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+# =========================
 # 리포트 실행
 # =========================
 def run_report():
+    today = datetime.now()
+
+    # 주말 스킵
+    if today.weekday() >= 5:
+        send_telegram("📌 오늘은 장이 열리지 않았습니다 (주말)")
+        return
+
+    snapshot = load_snapshot()
+
     total_buy = 0
     total_now = 0
     lines = []
 
     lines.append("📊 김종학 용돈 ETF 포트폴리오 리포트")
-    time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
-    lines.append(f"🕒 {time_str}")
+    lines.append(today.strftime("🕒 %Y-%m-%d %H:%M"))
+    lines.append("")
 
-    lines.append("────────────────────")
+    results = []
 
     for item in portfolio:
         price = get_current_price(item["code"])
@@ -71,32 +108,50 @@ def run_report():
         total_buy += buy_amt
         total_now += now_amt
 
-        emoji = "🔺" if profit > 0 else "🔻" if profit < 0 else "➖"
+        results.append({
+            "name": item["name"],
+            "price": price,
+            "now_amt": now_amt,
+            "profit": profit,
+            "rate": rate
+        })
 
-        lines.append(
-            f"{emoji} {item['name']}\n"
-            f"현재가: {price:,}원\n"
-            f"수익률: {rate:+.2f}%\n"
-            f"수익금: {profit:+,}원\n"
-        )
+        time.sleep(0.5)
 
-        time.sleep(0.5)  # 네이버 차단 방지
+    # 종목별 출력 + 비중
+    for r in results:
+        weight = r["now_amt"] / total_now * 100
+        emoji = "🔺" if r["profit"] > 0 else "🔻" if r["profit"] < 0 else "➖"
+
+        lines.append(f"■ {r['name']}")
+        lines.append(f"현재가: {r['price']:,}원")
+        lines.append(f"수익률: {r['rate']:+.2f}% {emoji}")
+        lines.append(f"평가손익: {r['profit']:+,}원")
+        lines.append(f"비중: {weight:.1f}%")
+        lines.append("────────────────────")
 
     total_profit = total_now - total_buy
     total_rate = total_profit / total_buy * 100
 
+    # 전일 대비
+    if snapshot:
+        diff_profit = total_profit - snapshot["total_profit"]
+        diff_emoji = "🔺" if diff_profit > 0 else "🔻" if diff_profit < 0 else "➖"
+        lines.append(f"전일 대비 수익 변화: {diff_profit:+,}원 {diff_emoji}")
+
+    lines.append("")
     lines.append("📈 전체 요약")
-    lines.append(f"총 매수금액: {total_buy:,}원")
     lines.append(f"총 평가금액: {total_now:,}원")
-    lines.append(f"총 수익금: {total_profit:+,}원")
     lines.append(f"전체 수익률: {total_rate:+.2f}%")
+    lines.append(f"전체 수익금: {total_profit:+,}원")
 
     send_telegram("\n".join(lines))
+
+    # 스냅샷 저장
+    save_snapshot(total_now, total_profit)
 
 # =========================
 # 실행
 # =========================
 if __name__ == "__main__":
     run_report()
-
-
