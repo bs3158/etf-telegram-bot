@@ -15,7 +15,7 @@ CHAT_ID = os.environ["CHAT_ID"]
 # 경로 설정
 # =========================
 DATA_DIR = "data"
-SNAPSHOT_FILE = os.path.join(DATA_DIR, "last_snapshot.json")
+SNAPSHOT_FILE = os.path.join(DATA_DIR, "snapshot_jonghak.json")
 
 # =========================
 # 포트폴리오
@@ -160,3 +160,4 @@ def run_report():
 # =========================
 if __name__ == "__main__":
     run_report()
+
