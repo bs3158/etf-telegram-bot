@@ -1,130 +1,148 @@
 import requests
-import matplotlib.pyplot as plt
-import os
 from datetime import datetime
+import os
+import json
+import matplotlib.pyplot as plt
+from matplotlib import font_manager, rc
 
-# =====================
-# 기본 설정
-# =====================
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
+# =========================
+# 텔레그램 설정
+# =========================
+BOT_TOKEN = os.environ["BOT_TOKEN"]
+CHAT_ID = os.environ["CHAT_ID"]
 
-TICKER = "SPYM"
+DATA_DIR = "data"
+SNAPSHOT_FILE = f"{DATA_DIR}/snapshot_three_women.json"
+GRAPH_FILE = f"{DATA_DIR}/three_women_etf.png"
+os.makedirs(DATA_DIR, exist_ok=True)
 
-PEOPLE = {
-    "Hyunjoo": {"qty": 107, "buy_price": 62.13},
-    "Seohye": {"qty": 77, "buy_price": 71.15},
-    "Wooseon": {"qty": 72, "buy_price": 71.39},
-}
+# =========================
+# 🔤 폰트 설정
+# =========================
+font_path = "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"
+if os.path.exists(font_path):
+    font_prop = font_manager.FontProperties(fname=font_path)
+    rc("font", family=font_prop.get_name())
+    plt.rcParams["axes.unicode_minus"] = False
 
-GRAPH_FILE = "data/three_women_total_value.png"
+# =========================
+# 포트폴리오 (SPYM 통일 / 수정 반영)
+# =========================
+portfolio = [
+    {"name": "Hyunjoo", "ticker": "SPYM", "qty": 107, "buy": 62.13},
+    {"name": "Seohye",  "ticker": "SPYM", "qty": 77,  "buy": 71.15},
+    {"name": "Wooseon", "ticker": "SPYM", "qty": 72,  "buy": 71.39},
+]
 
-
-# =====================
+# =========================
 # 가격 / 환율 조회
-# =====================
-def get_us_price(ticker):
+# =========================
+def get_price(ticker):
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
-    res = requests.get(url, timeout=10)
-    data = res.json()
-    return data["chart"]["result"][0]["meta"]["regularMarketPrice"]
+    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+    return r.json()["chart"]["result"][0]["meta"]["regularMarketPrice"]
 
+def get_usdkrw():
+    url = "https://query1.finance.yahoo.com/v8/finance/chart/KRW=X"
+    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+    return r.json()["chart"]["result"][0]["meta"]["regularMarketPrice"]
 
-def get_usd_krw():
-    url = "https://api.exchangerate.host/latest?base=USD&symbols=KRW"
-    res = requests.get(url, timeout=10)
-    data = res.json()
-    return data["rates"]["KRW"]
+# =========================
+# 스냅샷
+# =========================
+def load_snapshot():
+    if not os.path.exists(SNAPSHOT_FILE):
+        return {}
+    with open(SNAPSHOT_FILE, "r") as f:
+        return json.load(f)
 
+def save_snapshot(data):
+    with open(SNAPSHOT_FILE, "w") as f:
+        json.dump(data, f, indent=2)
 
-# =====================
-# 텔레그램 전송
-# =====================
-def send_message(text):
+# =========================
+# 텔레그램
+# =========================
+def send_msg(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    requests.post(url, data={"chat_id": CHAT_ID, "text": text})
+    requests.post(url, data={"chat_id": CHAT_ID, "text": text}, timeout=10)
 
-
-def send_photo(path):
+def send_photo(path, caption):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
     with open(path, "rb") as f:
-        requests.post(url, data={"chat_id": CHAT_ID}, files={"photo": f})
-
-
-# =====================
-# 메인 로직
-# =====================
-def run_report():
-    price_usd = get_us_price(TICKER)
-    usd_krw = get_usd_krw()
-
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-
-    message = f"📊 Three Women ETF 리포트\n🕒 {now}\n\n"
-
-    total_value_usd = 0
-    values_for_graph = []
-    names_for_graph = []
-
-    for name, info in PEOPLE.items():
-        qty = info["qty"]
-        buy_price = info["buy_price"]
-
-        value_usd = price_usd * qty
-        cost_usd = buy_price * qty
-        profit_usd = value_usd - cost_usd
-        profit_rate = profit_usd / cost_usd * 100
-
-        # ⚠️ 전일 대비 (기존 로직 그대로, 없으면 0)
-        today_diff_usd = 0
-
-        total_value_usd += value_usd
-
-        # =====================
-        # ✅ 출력용 원화 변환 (여기만 수정)
-        # =====================
-        price_krw = price_usd * usd_krw
-        value_krw = value_usd * usd_krw
-        profit_krw = profit_usd * usd_krw
-        today_diff_krw = today_diff_usd * usd_krw
-
-        message += (
-            f"■ {name}\n"
-            f"현재가: {price_krw:,.0f}원\n"
-            f"수익률: {profit_rate:.2f}%\n"
-            f"평가손익: {profit_krw:+,.0f}원\n"
-            f"전일 대비: {today_diff_krw:+,.0f}원\n"
-            f"────────────────────\n"
+        requests.post(
+            url,
+            data={"chat_id": CHAT_ID, "caption": caption},
+            files={"photo": f},
+            timeout=20
         )
 
-        values_for_graph.append(value_krw)
-        names_for_graph.append(name)
+# =========================
+# 실행
+# =========================
+def run_report():
+    prev = load_snapshot()
+    today = {}
 
-    total_value_krw = total_value_usd * usd_krw
+    price = get_price("SPYM")
+    fx = get_usdkrw()
 
-    message += (
-        f"\n📈 전체 요약\n"
-        f"총 평가금액: {total_value_krw:,.0f}원\n"
-        f"\n💱 적용 환율: 1 USD = {usd_krw:,.2f} KRW"
-    )
+    lines = [
+        "👩‍👩‍👧 Three Women ETF 리포트",
+        f"🕒 {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        ""
+    ]
 
-    # =====================
-    # 그래프 (기존 구조 유지, 원화 값 사용)
-    # =====================
+    names, values = [], []
+
+    for p in portfolio:
+        buy_amt = p["qty"] * p["buy"]
+        now_amt = p["qty"] * price
+        prev_amt = prev.get(p["name"], now_amt)
+
+        profit = now_amt - buy_amt
+        rate = profit / buy_amt * 100
+        delta = now_amt - prev_amt
+
+        today[p["name"]] = now_amt
+        names.append(p["name"])
+        values.append(now_amt)
+
+        lines.append(
+            f"■ {p['name']} (SPYM)\n"
+            f"현재가: ${price:.2f}\n"
+            f"수익률: {rate:+.2f}%\n"
+            f"평가손익: ${profit:+,.2f}\n"
+            f"전일 대비: ${delta:+,.2f}"
+        )
+        lines.append("- - - - -")
+
+    lines.append(f"💱 USD/KRW 환율: {fx:,.2f}원")
+    send_msg("\n".join(lines))
+
+    # =========================
+    # 그래프
+    # =========================
     plt.figure(figsize=(6, 4))
-    plt.bar(names_for_graph, values_for_graph)
+    bars = plt.bar(names, values)
     plt.title("Total Value")
-    plt.ylabel("KRW")
+    plt.ylabel("USD")
+
+    for b in bars:
+        plt.text(
+            b.get_x() + b.get_width() / 2,
+            b.get_height(),
+            f"${b.get_height():,.0f}",
+            ha="center",
+            va="bottom"
+        )
+
     plt.tight_layout()
     plt.savefig(GRAPH_FILE)
     plt.close()
 
-    # =====================
-    # 전송
-    # =====================
-    send_message(message)
-    send_photo(GRAPH_FILE)
-
+    send_photo(GRAPH_FILE, "📊 Three Women ETF Total Value")
+    save_snapshot(today)
 
 if __name__ == "__main__":
     run_report()
