@@ -1,105 +1,195 @@
+import requests
+from bs4 import BeautifulSoup
+from datetime import datetime
+import time
 import os
 import json
-import requests
-from datetime import datetime
 import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
+from matplotlib import font_manager, rc
 
 # =========================
-# 기본 설정
+# 텔레그램 설정
 # =========================
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
+BOT_TOKEN = os.environ["BOT_TOKEN"]
+CHAT_ID = os.environ["CHAT_ID"]
 
 DATA_DIR = "data"
+SNAPSHOT_FILE = f"{DATA_DIR}/snapshot_pension.json"
+GRAPH_FILE = f"{DATA_DIR}/pension_account_compare.png"
 os.makedirs(DATA_DIR, exist_ok=True)
 
-SNAPSHOT_FILE = f"{DATA_DIR}/pension_snapshot.json"
-GRAPH_FILE = f"{DATA_DIR}/pension_graph.png"
-
-ETF_LIST = {
-    "TIGER미국S&P500": 35000000,
-    "KODEX미국나스닥100": 28000000,
-    "KODEX미국배당성장": 19000000,
-}
+# =========================
+# 🔤 한글 폰트 설정
+# =========================
+font_path = "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"
+if os.path.exists(font_path):
+    font_prop = font_manager.FontProperties(fname=font_path)
+    rc("font", family=font_prop.get_name())
+    plt.rcParams["axes.unicode_minus"] = False
 
 # =========================
-# 한글 폰트 설정 (GitHub Actions)
+# 포트폴리오
 # =========================
-FONT_PATH = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+portfolio = [
+    {"account": "IRP", "name": "ACE 미국 S&P500", "code": "360200", "qty": 41, "buy": 24765},
+    {"account": "IRP", "name": "ACE 미국 나스닥100 미국채 혼합", "code": "438100", "qty": 88, "buy": 14621},
+    {"account": "IRP", "name": "TIGER 미국 배당 다우존스", "code": "458730", "qty": 84, "buy": 13100},
 
-if os.path.exists(FONT_PATH):
-    font_prop = fm.FontProperties(fname=FONT_PATH)
-    plt.rcParams["font.family"] = font_prop.get_name()
-else:
-    print("⚠️ NotoSansCJK 폰트 없음")
+    {"account": "개인연금", "name": "TIGER KRX 금현물", "code": "0072R0", "qty": 197, "buy": 12211},
+    {"account": "개인연금", "name": "KIWOOM 국고채10년", "code": "148070", "qty": 15, "buy": 113824},
+    {"account": "개인연금", "name": "KODEX 200TR", "code": "278530", "qty": 153, "buy": 19754},
+    {"account": "개인연금", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 128, "buy": 23556},
+    {"account": "개인연금", "name": "ACE 미국달러SOFR금리(합성)", "code": "456880", "qty": 144, "buy": 11863},
 
-plt.rcParams["axes.unicode_minus"] = False
+    {"account": "ISA", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 6, "buy": 25045},
+    {"account": "ISA", "name": "TIGER 미국나스닥100", "code": "133690", "qty": 2, "buy": 164130},
+    {"account": "ISA", "name": "TIGER 200", "code": "102110", "qty": 3, "buy": 70510},
+]
 
 # =========================
-# 텔레그램 전송
+# 현재가 조회
 # =========================
-def send_message(text):
+def get_current_price(code):
+    url = f"https://finance.naver.com/item/main.naver?code={code}"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    res = requests.get(url, headers=headers, timeout=10)
+    soup = BeautifulSoup(res.text, "html.parser")
+    price = soup.select_one("p.no_today span.blind")
+    if not price:
+        raise ValueError(code)
+    return int(price.text.replace(",", ""))
+
+# =========================
+# 텔레그램
+# =========================
+def send_msg(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     requests.post(url, data={"chat_id": CHAT_ID, "text": text})
 
-def send_photo(photo_path, caption=""):
+def send_photo(path, caption):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
-    with open(photo_path, "rb") as f:
-        requests.post(
-            url,
-            data={"chat_id": CHAT_ID, "caption": caption},
-            files={"photo": f},
-        )
+    with open(path, "rb") as f:
+        requests.post(url, data={"chat_id": CHAT_ID, "caption": caption}, files={"photo": f})
 
 # =========================
-# 스냅샷 로드/저장
+# 스냅샷
 # =========================
 def load_snapshot():
     if not os.path.exists(SNAPSHOT_FILE):
-        return []
-    with open(SNAPSHOT_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+        return {}
+    return json.load(open(SNAPSHOT_FILE, "r", encoding="utf-8"))
 
 def save_snapshot(data):
-    with open(SNAPSHOT_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    json.dump(data, open(SNAPSHOT_FILE, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
 # =========================
-# 메인 로직
+# 실행
 # =========================
-def run():
-    today = datetime.now().strftime("%Y-%m-%d")
+def run_report():
+    prev = load_snapshot()
+    today = {}
+    prices = {}
 
-    total_value = sum(ETF_LIST.values())
+    for p in portfolio:
+        try:
+            prices[p["code"]] = get_current_price(p["code"])
+        except:
+            prices[p["code"]] = 0
+        time.sleep(0.3)
 
-    snapshots = load_snapshot()
-    snapshots.append({
-        "date": today,
-        "value": total_value
-    })
-    save_snapshot(snapshots)
+    accounts = {}
+    totals = {}
+    g_buy = g_now = g_prev = 0
 
-    # ===== 그래프 =====
-    dates = [s["date"] for s in snapshots]
-    values = [s["value"] / 1_000_000 for s in snapshots]
+    lines = [
+        "📊 연금 / ISA 통합 포트폴리오 리포트",
+        f"🕒 {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        ""
+    ]
 
-    plt.figure(figsize=(8, 4))
-    plt.plot(dates, values, marker="o")
-    plt.title("개인연금 평가금액 추이 (백만원)")
-    plt.xticks(rotation=45)
-    plt.grid(True)
+    for p in portfolio:
+        acc = p["account"]
+        code = p["code"]
+        qty = p["qty"]
+        buy_amt = qty * p["buy"]
+        now_amt = qty * prices[code]
+        key = f"{acc}_{code}"
+        prev_amt = prev.get(key, now_amt)
+
+        today[key] = now_amt
+
+        accounts.setdefault(acc, [])
+        totals.setdefault(acc, {"buy": 0, "now": 0, "prev": 0})
+
+        accounts[acc].append({
+            "name": p["name"],
+            "price": prices[code],
+            "qty": qty,
+            "buy": buy_amt,
+            "now": now_amt,
+            "profit": now_amt - buy_amt,
+            "rate": (now_amt - buy_amt) / buy_amt * 100 if buy_amt else 0,
+            "delta": now_amt - prev_amt
+        })
+
+        totals[acc]["buy"] += buy_amt
+        totals[acc]["now"] += now_amt
+        totals[acc]["prev"] += prev_amt
+
+        g_buy += buy_amt
+        g_now += now_amt
+        g_prev += prev_amt
+
+    for acc in accounts:
+        lines.append(f"📂 [{acc} 계좌]")
+        lines.append("────────────────────")
+
+        acc_now = totals[acc]["now"]
+
+        for i in accounts[acc]:
+            weight = i["now"] / acc_now * 100 if acc_now else 0
+            lines.append(
+                f"■ {i['name']}\n"
+                f"현재가: {i['price']:,}원\n"
+                f"수익률: {i['rate']:+.2f}%\n"
+                f"평가손익: {i['profit']:+,}원\n"
+                f"비중: {weight:.1f}%"
+            )
+            lines.append("- - - - -")
+
+        profit = totals[acc]["now"] - totals[acc]["buy"]
+        rate = profit / totals[acc]["buy"] * 100 if totals[acc]["buy"] else 0
+
+        lines += [
+            f"🧾 {acc} 요약",
+            f"총 평가금액: {totals[acc]['now']:,}원",
+            f"총 수익금: {profit:+,}원",
+            f"총 수익률: {rate:+.2f}%",
+            "========================\n"
+        ]
+
+    g_profit = g_now - g_buy
+    g_rate = g_profit / g_buy * 100 if g_buy else 0
+
+    lines += [
+        "📈 [전체 포트폴리오 요약]",
+        f"전체 평가금액: {g_now:,}원",
+        f"전체 총 수익금: {g_profit:+,}원",
+        f"전체 총 수익률: {g_rate:+.2f}%"
+    ]
+
+    send_msg("\n".join(lines))
+
+    # 그래프
+    plt.figure(figsize=(6, 4))
+    plt.bar(totals.keys(), [v["now"] for v in totals.values()])
+    plt.title("계좌별 평가금액")
     plt.tight_layout()
     plt.savefig(GRAPH_FILE)
     plt.close()
 
-    # ===== 텔레그램 =====
-    msg = (
-        "📌 개인연금 ETF 현황\n\n"
-        f"총 평가금액: {total_value:,.0f} 원"
-    )
-    send_message(msg)
-    send_photo(GRAPH_FILE, "📈 개인연금 평가금액 추이")
+    send_photo(GRAPH_FILE, "📊 계좌별 평가금액 비교")
+    save_snapshot(today)
 
 if __name__ == "__main__":
-    run()
+    run_report()
