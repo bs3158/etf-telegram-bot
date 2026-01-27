@@ -183,7 +183,7 @@ def run_report():
     # 그래프
     plt.figure(figsize=(6, 4))
     plt.bar(totals.keys(), [v["now"] for v in totals.values()])
-    plt.title("계좌별 평가금액")
+    plt.title("Total Value by Accouns")
     plt.tight_layout()
     plt.savefig(GRAPH_FILE)
     plt.close()
@@ -193,3 +193,4 @@ def run_report():
 
 if __name__ == "__main__":
     run_report()
+
