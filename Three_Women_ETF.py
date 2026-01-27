@@ -26,7 +26,7 @@ if os.path.exists(font_path):
     plt.rcParams["axes.unicode_minus"] = False
 
 # =========================
-# 포트폴리오 (SPYM 통일 / 수정 반영)
+# 포트폴리오
 # =========================
 portfolio = [
     {"name": "Hyunjoo", "ticker": "SPYM", "qty": 107, "buy": 62.13},
@@ -96,24 +96,31 @@ def run_report():
     names, values = [], []
 
     for p in portfolio:
-        buy_amt = p["qty"] * p["buy"]
-        now_amt = p["qty"] * price
-        prev_amt = prev.get(p["name"], now_amt)
+        buy_amt_usd = p["qty"] * p["buy"]
+        now_amt_usd = p["qty"] * price
+        prev_amt_usd = prev.get(p["name"], now_amt_usd)
+
+        buy_amt = buy_amt_usd * fx
+        now_amt = now_amt_usd * fx
+        prev_amt = prev_amt_usd * fx
 
         profit = now_amt - buy_amt
         rate = profit / buy_amt * 100
         delta = now_amt - prev_amt
 
-        today[p["name"]] = now_amt
+        rate_emoji = "🔺" if rate > 0 else "🔻" if rate < 0 else "➖"
+        delta_emoji = "🔺" if delta > 0 else "🔻" if delta < 0 else "➖"
+
+        today[p["name"]] = now_amt_usd
         names.append(p["name"])
         values.append(now_amt)
 
         lines.append(
             f"■ {p['name']} (SPYM)\n"
-            f"현재가: ${price:.2f}\n"
-            f"수익률: {rate:+.2f}%\n"
-            f"평가손익: ${profit:+,.2f}\n"
-            f"전일 대비: ${delta:+,.2f}"
+            f"현재가: {(price * fx):,.0f}원\n"
+            f"수익률: {rate:+.2f}% {rate_emoji}\n"
+            f"평가손익: {profit:+,.0f}원\n"
+            f"전일 대비: {delta:+,.0f}원 {delta_emoji}"
         )
         lines.append("- - - - -")
 
@@ -126,13 +133,13 @@ def run_report():
     plt.figure(figsize=(6, 4))
     bars = plt.bar(names, values)
     plt.title("Total Value")
-    plt.ylabel("USD")
+    plt.ylabel("KRW")
 
     for b in bars:
         plt.text(
             b.get_x() + b.get_width() / 2,
             b.get_height(),
-            f"${b.get_height():,.0f}",
+            f"{b.get_height():,.0f}원",
             ha="center",
             va="bottom"
         )
