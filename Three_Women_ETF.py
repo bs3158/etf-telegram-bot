@@ -26,12 +26,12 @@ if os.path.exists(font_path):
     plt.rcParams["axes.unicode_minus"] = False
 
 # =========================
-# 포트폴리오
+# 포트폴리오 (투자 원금 포함)
 # =========================
 portfolio = [
-    {"name": "Hyunjoo", "ticker": "SPYM", "qty": 107, "buy": 62.13},
-    {"name": "Seohye",  "ticker": "SPYM", "qty": 77,  "buy": 71.15},
-    {"name": "Wooseon", "ticker": "SPYM", "qty": 72,  "buy": 71.39},
+    {"name": "Hyunjoo", "ticker": "SPYM", "qty": 107, "principal": 6_731_607},
+    {"name": "Seohye",  "ticker": "SPYM", "qty": 77,  "principal": 5_581_502},
+    {"name": "Wooseon", "ticker": "SPYM", "qty": 72,  "principal": 4_927_559},
 ]
 
 # =========================
@@ -96,28 +96,25 @@ def run_report():
     names, values = [], []
 
     for p in portfolio:
-        buy_amt_usd = p["qty"] * p["buy"]
-        now_amt_usd = p["qty"] * price
-        prev_amt_usd = prev.get(p["name"], now_amt_usd)
+        now_amt = p["qty"] * price * fx
+        prev_amt = prev.get(p["name"], now_amt)
 
-        buy_amt = buy_amt_usd * fx
-        now_amt = now_amt_usd * fx
-        prev_amt = prev_amt_usd * fx
-
-        profit = now_amt - buy_amt
-        rate = profit / buy_amt * 100
+        principal = p["principal"]
+        profit = now_amt - principal
+        rate = profit / principal * 100
         delta = now_amt - prev_amt
 
         rate_emoji = "🔺" if rate > 0 else "🔻" if rate < 0 else "➖"
         delta_emoji = "🔺" if delta > 0 else "🔻" if delta < 0 else "➖"
 
-        today[p["name"]] = now_amt_usd
+        today[p["name"]] = now_amt
         names.append(p["name"])
         values.append(now_amt)
 
         lines.append(
             f"■ {p['name']} (SPYM)\n"
             f"현재가: {(price * fx):,.0f}원\n"
+            f"투자 원금: {principal:,.0f}원\n"
             f"평가금액: {now_amt:,.0f}원\n"
             f"수익률: {rate:+.2f}% {rate_emoji}\n"
             f"평가손익: {profit:+,.0f}원\n"
