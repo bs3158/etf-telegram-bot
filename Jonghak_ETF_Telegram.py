@@ -17,6 +17,11 @@ CHAT_ID = os.environ["CHAT_ID"]
 SNAPSHOT_PATH = "data/snapshot_jonghak.json"
 
 # =========================
+# ✅ 기준 원금
+# =========================
+PRINCIPAL = 41_180_360
+
+# =========================
 # 포트폴리오
 # =========================
 portfolio = [
@@ -70,7 +75,6 @@ def run_report():
     prev_snapshot = load_snapshot()
     today_snapshot = {}
 
-    total_buy = 0
     total_now = 0
     total_prev = 0
 
@@ -105,7 +109,6 @@ def run_report():
         delta = now_amt - prev_amt
         weight = now_amt / portfolio_total * 100
 
-        total_buy += buy_amt
         total_now += now_amt
         total_prev += prev_amt
 
@@ -126,14 +129,17 @@ def run_report():
 
         time.sleep(0.3)
 
-    # ✅ 전체 요약
-    total_profit = total_now - total_buy
-    total_rate = total_profit / total_buy * 100
+    # =========================
+    # ✅ 전체 요약 (원금 기준)
+    # =========================
+    total_profit = total_now - PRINCIPAL
+    total_rate = total_profit / PRINCIPAL * 100
     total_delta = total_now - total_prev
     total_delta_emoji = "🔺" if total_delta > 0 else "🔻" if total_delta < 0 else "➖"
 
     lines.append("")
     lines.append("📈 전체 요약")
+    lines.append(f"투자 원금: {PRINCIPAL:,}원")
     lines.append(f"총 평가금액: {total_now:,}원")
     lines.append(f"전체 수익금: {total_profit:+,}원")
     lines.append(f"전체 수익률: {total_rate:+.2f}%")
@@ -141,7 +147,6 @@ def run_report():
 
     send_telegram("\n".join(lines))
 
-    # 종가 기준 스냅샷 저장
     save_snapshot(today_snapshot)
 
 # =========================
