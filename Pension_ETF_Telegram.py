@@ -35,11 +35,11 @@ portfolio = [
     {"account": "IRP", "name": "ACE 미국 나스닥100 미국채 혼합", "code": "438100", "qty": 88, "buy": 14621},
     {"account": "IRP", "name": "TIGER 미국 배당 다우존스", "code": "458730", "qty": 84, "buy": 13100},
 
-    {"account": "개인연금", "name": "TIGER KRX 금현물", "code": "0072R0", "qty": 197, "buy": 12211},
-    {"account": "개인연금", "name": "KIWOOM 국고채10년", "code": "148070", "qty": 15, "buy": 113824},
-    {"account": "개인연금", "name": "KODEX 200TR", "code": "278530", "qty": 153, "buy": 19754},
-    {"account": "개인연금", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 128, "buy": 23556},
-    {"account": "개인연금", "name": "ACE 미국달러SOFR금리(합성)", "code": "456880", "qty": 144, "buy": 11863},
+    {"account": "Pension", "name": "TIGER KRX 금현물", "code": "0072R0", "qty": 197, "buy": 12211},
+    {"account": "Pension", "name": "KIWOOM 국고채10년", "code": "148070", "qty": 15, "buy": 113824},
+    {"account": "Pension", "name": "KODEX 200TR", "code": "278530", "qty": 153, "buy": 19754},
+    {"account": "Pension", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 128, "buy": 23556},
+    {"account": "Pension", "name": "ACE 미국달러SOFR금리(합성)", "code": "456880", "qty": 144, "buy": 11863},
 
     {"account": "ISA", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 6, "buy": 25045},
     {"account": "ISA", "name": "TIGER 미국나스닥100", "code": "133690", "qty": 2, "buy": 164130},
@@ -140,6 +140,9 @@ def run_report():
         g_now += now_amt
         g_prev += prev_amt
 
+    # =========================
+    # 출력
+    # =========================
     for acc in accounts:
         lines.append(f"📂 [{acc} 계좌]")
         lines.append("────────────────────")
@@ -148,42 +151,59 @@ def run_report():
 
         for i in accounts[acc]:
             weight = i["now"] / acc_now * 100 if acc_now else 0
+
+            rate_emoji = "🔺" if i["rate"] > 0 else "🔻" if i["rate"] < 0 else "➖"
+            delta_emoji = "🔺" if i["delta"] > 0 else "🔻" if i["delta"] < 0 else "➖"
+
             lines.append(
                 f"■ {i['name']}\n"
                 f"현재가: {i['price']:,}원\n"
-                f"수익률: {i['rate']:+.2f}%\n"
+                f"수익률: {i['rate']:+.2f}% {rate_emoji}\n"
                 f"평가손익: {i['profit']:+,}원\n"
+                f"전일 대비: {i['delta']:+,}원 {delta_emoji}\n"
                 f"비중: {weight:.1f}%"
             )
             lines.append("- - - - -")
 
-        profit = totals[acc]["now"] - totals[acc]["buy"]
-        rate = profit / totals[acc]["buy"] * 100 if totals[acc]["buy"] else 0
+        acc_profit = totals[acc]["now"] - totals[acc]["buy"]
+        acc_rate = acc_profit / totals[acc]["buy"] * 100 if totals[acc]["buy"] else 0
+        acc_delta = totals[acc]["now"] - totals[acc]["prev"]
+
+        acc_rate_emoji = "🔺" if acc_rate > 0 else "🔻" if acc_rate < 0 else "➖"
+        acc_delta_emoji = "🔺" if acc_delta > 0 else "🔻" if acc_delta < 0 else "➖"
 
         lines += [
             f"🧾 {acc} 요약",
             f"총 평가금액: {totals[acc]['now']:,}원",
-            f"총 수익금: {profit:+,}원",
-            f"총 수익률: {rate:+.2f}%",
+            f"총 수익금: {acc_profit:+,}원",
+            f"총 수익률: {acc_rate:+.2f}% {acc_rate_emoji}",
+            f"전일 대비: {acc_delta:+,}원 {acc_delta_emoji}",
             "========================\n"
         ]
 
     g_profit = g_now - g_buy
     g_rate = g_profit / g_buy * 100 if g_buy else 0
+    g_delta = g_now - g_prev
+
+    g_rate_emoji = "🔺" if g_rate > 0 else "🔻" if g_rate < 0 else "➖"
+    g_delta_emoji = "🔺" if g_delta > 0 else "🔻" if g_delta < 0 else "➖"
 
     lines += [
         "📈 [전체 포트폴리오 요약]",
         f"전체 평가금액: {g_now:,}원",
         f"전체 총 수익금: {g_profit:+,}원",
-        f"전체 총 수익률: {g_rate:+.2f}%"
+        f"전체 총 수익률: {g_rate:+.2f}% {g_rate_emoji}",
+        f"전일 대비 합계: {g_delta:+,}원 {g_delta_emoji}"
     ]
 
     send_msg("\n".join(lines))
 
+    # =========================
     # 그래프
+    # =========================
     plt.figure(figsize=(6, 4))
     plt.bar(totals.keys(), [v["now"] for v in totals.values()])
-    plt.title("Total Value by Accouns")
+    plt.title("Total Value by Accounts")
     plt.tight_layout()
     plt.savefig(GRAPH_FILE)
     plt.close()
@@ -193,4 +213,3 @@ def run_report():
 
 if __name__ == "__main__":
     run_report()
-
