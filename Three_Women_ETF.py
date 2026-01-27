@@ -118,6 +118,7 @@ def run_report():
         lines.append(
             f"■ {p['name']} (SPYM)\n"
             f"현재가: {(price * fx):,.0f}원\n"
+            f"평가금액: {now_amt:,.0f}원\n"
             f"수익률: {rate:+.2f}% {rate_emoji}\n"
             f"평가손익: {profit:+,.0f}원\n"
             f"전일 대비: {delta:+,.0f}원 {delta_emoji}"
@@ -133,13 +134,13 @@ def run_report():
     plt.figure(figsize=(6, 4))
     bars = plt.bar(names, values)
     plt.title("Total Value")
-    plt.ylabel("KRW")
+    plt.ylabel("won")
 
     for b in bars:
         plt.text(
             b.get_x() + b.get_width() / 2,
             b.get_height(),
-            f"{b.get_height():,.0f}원",
+            f"{b.get_height():,.0f} won",
             ha="center",
             va="bottom"
         )
