@@ -47,6 +47,7 @@ jobs:
           python Jonghak_ETF_Telegram.py
           python Pension_ETF_Telegram.py
           python Three_Women_ETF.py
+          python Woorisaju.py
 
       # 6️⃣ 스냅샷 & 그래프 자동 커밋
       - name: Commit snapshots & graphs
