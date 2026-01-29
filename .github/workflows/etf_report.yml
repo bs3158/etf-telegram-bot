@@ -26,6 +26,8 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install finance-datareader requests pandas
+          pip install -r requirements.txt
+
 
       - name: Run ETF report
         run: |
