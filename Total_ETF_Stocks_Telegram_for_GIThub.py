@@ -5,9 +5,9 @@ import time
 import os
 import matplotlib.pyplot as plt
 
-# =========================
+# =====================================================
 # 텔레그램 설정
-# =========================
+# =====================================================
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
@@ -25,9 +25,9 @@ def send_photo(path, caption):
             timeout=20
         )
 
-# =========================
+# =====================================================
 # 공통 유틸
-# =========================
+# =====================================================
 def arrow(val):
     if val > 0:
         return "⬆️"
@@ -74,6 +74,19 @@ def get_fx():
     except Exception as e:
         print(f"[WARN] 환율 조회 실패 (KRW=X): {e}")
         return 0
+
+# =====================================================
+# 가격 / 환율 조회
+# =====================================================
+def get_price(ticker):
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+    return r.json()["chart"]["result"][0]["meta"]["regularMarketPrice"]
+
+def get_usdkrw():
+    url = "https://query1.finance.yahoo.com/v8/finance/chart/KRW=X"
+    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+    return r.json()["chart"]["result"][0]["meta"]["regularMarketPrice"]
 
 
 # =====================================================
@@ -181,6 +194,8 @@ def report_three_women():
         f"전체 수익금: {total_profit:+,.0f} 원 {arrow(total_profit)}",
         f"전체 수익률: {total_rate:+.2f}% {arrow(total_rate)}",
     ]
+    
+    lines.append(f"💱 USD/KRW 환율: {fx:,.2f}원")
 
     send_msg("\n".join(lines))
 
