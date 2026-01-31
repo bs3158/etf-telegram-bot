@@ -10,9 +10,10 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
 
 RSS_LIST = [
-    "https://www.hankyung.com/feed/economy",
-    "https://www.mk.co.kr/rss/30000001/",
-    "https://www.cnbc.com/id/10001147/device/rss/rss.html" # 영어 소스
+    "https://www.hani.co.kr/rss/",  # 한겨레 경제
+    "https://www.hankyung.com/feed/economy", # 한국경제
+    "https://www.mk.co.kr/rss/30000001/",    # 매일경제
+    "https://www.cnbc.com/id/10001147/device/rss/rss.html" # CNBC (영어)
 ]
 
 translator = Translator()
@@ -27,18 +28,28 @@ def translate_text(text):
 
 def get_summary(url):
     try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        r = requests.get(url, timeout=5, headers=headers)
+        # 브라우저인 것처럼 속이는 헤더 추가 (매우 중요)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        r = requests.get(url, timeout=10, headers=headers)
+        r.encoding = 'utf-8' # 한글 깨짐 방지
+        
         soup = BeautifulSoup(r.text, "html.parser")
-        for s in soup(['script', 'style', 'header', 'footer', 'nav']):
+        
+        # 기사 본문 외 불필요한 태그 제거
+        for s in soup(['script', 'style', 'header', 'footer', 'nav', 'aside']):
             s.decompose()
+
         text = soup.get_text(" ", strip=True)
+        # 핵심 문장 추출 로직
         sentences = re.split(r'(?<=[.!?])\s+', text)
-        valid_sentences = [s for s in sentences if len(s) > 30 and len(s) < 200]
-        summary = " ".join(valid_sentences[:2])
-        return summary if summary else "본문을 가져올 수 없습니다."
-    except:
-        return "요약을 불러오는 중 오류가 발생했습니다."
+        valid_sentences = [s for s in sentences if len(s) > 40 and len(s) < 200]
+        
+        summary = " ".join(valid_sentences[:2]) # 상위 2문장 추출
+        return summary if summary else "본문을 요약할 수 없습니다."
+    except Exception as e:
+        return f"요약 실패 (사유: {str(e)})"
 
 def collect_and_send():
     all_news = []
