@@ -18,7 +18,7 @@ jobs:
 
       - run: pip install requests
 
-      - run: python lotto_report_bot.py
+      - run: python Lotto.py
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
