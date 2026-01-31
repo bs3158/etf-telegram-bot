@@ -44,25 +44,32 @@ def collect_and_send():
     all_news = []
     for rss in RSS_LIST:
         feed = feedparser.parse(rss)
-        for entry in feed.entries[:7]:
+        # 소스당 기사를 충분히 가져온 뒤 나중에 20개로 자릅니다.
+        for entry in feed.entries[:10]: 
             all_news.append({"title": entry.title, "link": entry.link})
 
+    # 총 20개로 제한하되, 수집된 게 20개보다 적을 상황도 대비합니다.
     target_news = all_news[:20]
+    total_articles = len(target_news)
     
+    # 5개씩 묶을 때 총 몇 개의 메시지가 생성될지 미리 계산
     chunk_size = 5
-    for i in range(0, len(target_news), chunk_size):
-        chunk = target_news[i:i+chunk_size]
-        message = f"<b>🚀 실시간 주요 뉴스 ({i//chunk_size + 1}/4)</b>\n\n"
-        
-        # 마지막 5개 기사(마지막 묶음)인 경우 번역 수행
-        is_last_chunk = (i >= 15)
+    # total_chunks 계산: (전체 개수 + 4) // 5 방식 (올림 처리)
+    total_chunks = (total_articles + chunk_size - 1) // chunk_size
 
+    for i in range(0, total_articles, chunk_size):
+        chunk = target_news[i:i+chunk_size]
+        current_chunk_num = (i // chunk_size) + 1
+        
+        # 상단 표기: [현재 번호 / 전체 번호]
+        message = f"<b>🚀 실시간 주요 뉴스 ({current_chunk_num}/{total_chunks})</b>\n\n"
+        
         for idx, item in enumerate(chunk):
             title = item['title']
             summary = get_summary(item['link'])
             
-            # 마지막 묶음이거나 제목에 영어가 포함된 경우 번역
-            if is_last_chunk or re.search('[a-zA-Z]', title):
+            # 영문 뉴스 자동 감지 및 번역 (기존 로직 유지)
+            if re.search('[a-zA-Z]{5,}', title): # 알파벳 5자 이상 연속 시 영어로 간주
                 title = f"[번역] " + translate_text(title)
                 summary = translate_text(summary)
 
@@ -71,7 +78,6 @@ def collect_and_send():
             message += f"🔗 <a href='{item['link']}'>기사 보기</a>\n\n"
             message += "--------------------------\n\n"
         
-        # 텔레그램 전송 함수 호출 (기존과 동일)
         send_to_telegram(message)
 
 def send_to_telegram(text):
