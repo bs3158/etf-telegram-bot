@@ -1,0 +1,35 @@
+name: English Pattern Daily Bot
+
+on:
+  schedule:
+    # 한국 시간 기준
+    # 오전 7시 KST → 전날 22:00 UTC
+    # 오후 5시 KST → 08:00 UTC
+    - cron: '0 22 * * *'  # 오전 7시 KST
+    - cron: '0 8 * * *'   # 오후 5시 KST
+  workflow_dispatch:  # 수동 실행 가능
+
+jobs:
+  send_patterns:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas requests openpyxl
+
+      - name: Send English Pattern Telegram
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          python EnglishPatternBot.py
