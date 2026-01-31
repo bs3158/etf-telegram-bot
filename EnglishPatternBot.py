@@ -14,18 +14,21 @@ def send_telegram(text):
         "disable_web_page_preview": True
     })
 
-# 엑셀 불러오기
+# 엑셀 읽기
 df = pd.read_excel("English_90Patterns_with_Korean.xlsx", dtype=str)
+
+# Day 컬럼 숫자형으로 변환
+df["Day"] = df["Day"].astype(int)
 
 def get_today_patterns(df):
     now = datetime.utcnow() + pd.Timedelta(hours=9)
     day_number = (now.day - 1) % 90 + 1  # 1~90 Day
     df_sorted = df.sort_values(by="Day")
-    today_df = df_sorted[df_sorted["Day"] == str(day_number)]
+    today_df = df_sorted[df_sorted["Day"] == day_number]
     # 한 Day에 3개가 없으면 다음 Day에서 채우기
     if len(today_df) < 3:
         needed = 3 - len(today_df)
-        next_rows = df_sorted[df_sorted["Day"] == str((day_number % 90) + 1)]
+        next_rows = df_sorted[df_sorted["Day"] == ((day_number % 90) + 1)]
         today_df = pd.concat([today_df, next_rows.head(needed)], ignore_index=True)
     return today_df, day_number
 
