@@ -4,8 +4,8 @@ import requests
 from bs4 import BeautifulSoup
 import re
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
+BOT_TOKEN = os.environ["BOT_TOKEN"]
+CHAT_ID = os.environ["CHAT_ID"]
 
 # =========================
 # RSS
