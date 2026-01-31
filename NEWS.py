@@ -4,7 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 
-BOT_TOKEN = os.environ["BOT_TOKEN"]
+BBOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
 # =========================
@@ -23,12 +23,18 @@ RSS_LIST = [
 def send_telegram(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-    requests.post(url, data={
-        "chat_id": CHAT_ID,
-        "text": text,
-        "disable_web_page_preview": True
-    })
+    MAX = 4000   # 안전 마진
 
+    for i in range(0, len(text), MAX):
+        part = text[i:i+MAX]
+
+        res = requests.post(url, data={
+            "chat_id": CHAT_ID,
+            "text": part,
+            "disable_web_page_preview": True
+        })
+
+        print("Telegram:", res.status_code)
 
 # =========================
 # 기사 본문 추출
