@@ -4,3 +4,6 @@ pandas
 lxml
 matplotlib
 python-telegram-bot
+feedparser
+transformers
+torch
