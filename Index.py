@@ -51,7 +51,7 @@ def main():
         f"🇺🇸 미국\n"
         f"🟢 S&P500 : {sp500}\n"
         f"🟢 NASDAQ : {nasdaq}\n"
-        f"🟡 기준금리(Fed) : {us_rate}\n"
+        f"🟡 기준금리(Fed) : {us_rate}\n\n"
         f"🇰🇷 한국\n"
         f"🔵 KOSPI : {kospi}\n"
         f"🔵 KOSDAQ : {kosdaq}\n"
