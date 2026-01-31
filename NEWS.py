@@ -4,7 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 
-BBOT_TOKEN = os.environ["BOT_TOKEN"]
+BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
 # =========================
