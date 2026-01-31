@@ -1,106 +1,84 @@
 import os
 import pandas as pd
-import datetime
 import requests
-import random
+from datetime import datetime
 
 # =========================
 # 환경 변수
 # =========================
-BOT_TOKEN = os.environ["BOT_TOKEN"]
-CHAT_ID = os.environ["CHAT_ID"]
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+CHAT_ID = os.environ.get("CHAT_ID")
+
+if not BOT_TOKEN or not CHAT_ID:
+    raise ValueError("BOT_TOKEN 또는 CHAT_ID 환경 변수가 설정되지 않았습니다.")
 
 # =========================
-# 텔레그램 전송 함수
+# 텔레그램 전송
 # =========================
 def send_telegram(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    requests.post(url, data={
+    response = requests.post(url, data={
         "chat_id": CHAT_ID,
         "text": text,
         "disable_web_page_preview": True
     })
+    print("Telegram status:", response.status_code)
+    print("Telegram response:", response.text)
 
 # =========================
-# 엑셀 데이터 로드
+# 엑셀에서 90일 패턴 읽기
 # =========================
-EXCEL_FILE = "English_90Patterns_with_Korean.xlsx"
-df = pd.read_excel(EXCEL_FILE)
+def load_patterns(file_path="English_90Patterns_with_Korean.xlsx"):
+    df = pd.read_excel(file_path)
+    # 컬럼: Day, Pattern, Example, Korean
+    return df
 
 # =========================
-# 날짜 기반 Day 계산 (1~90)
+# 오늘 발송할 3개 패턴 선택
 # =========================
-def get_today_day(start_date="2026-01-31"):
-    start = datetime.datetime.strptime(start_date, "%Y-%m-%d")
-    today = datetime.datetime.now()
-    delta = (today - start).days
-    day = (delta % 90) + 1  # 1~90 반복
-    return day
+def get_today_patterns(df):
+    # 현재 한국 시간 기준
+    now = datetime.utcnow() + pd.Timedelta(hours=9)
+    day_index = now.day % 90  # 1~90 패턴 반복
+    # slice: 3개씩
+    today_df = df.iloc[day_index*3 : day_index*3+3]
+    return today_df
 
 # =========================
-# 혼자 영어 작문 주제 예시
+# 메시지 생성
 # =========================
-WRITING_TOPICS = [
-    "Write about your favorite hobby.",
-    "Describe your dream vacation.",
-    "Write a short story about a memorable day.",
-    "Describe your favorite food.",
-    "Write about a goal you want to achieve this year.",
-    "Describe your ideal weekend."
-]
+def create_message(today_df):
+    now = datetime.utcnow() + pd.Timedelta(hours=9)
+    date_str = now.strftime("%Y-%m-%d (%H:%M) KST")
+
+    msg = f"📚 English Pattern 90 Days\n🗓 {date_str}\n\n"
+
+    for idx, row in today_df.iterrows():
+        msg += f"📌 Pattern {row['Day']}: {row['Pattern']}\n"
+        msg += f"✏ Example: {row['Example']}\n"
+        msg += f"🇰🇷 한국어: {row['Korean']}\n\n"
+
+    # 영어 작문 주제
+    msg += "📝 Today Writing Topic: Describe your favorite hobby in English.\n"
+
+    return msg
 
 # =========================
-# 오늘 구문 메시지 생성
+# 메시지 분할 전송
 # =========================
-def generate_today_message():
-    day = get_today_day()
-    patterns_today = df[df["Day"] == day].sample(3, replace=True)  # 3개 구문 랜덤 선택
-    topic = random.choice(WRITING_TOPICS)
-    
-    message = f"📚 English Pattern Day {day}\n\n"
-    for idx, row in patterns_today.iterrows():
-        message += f"• Pattern: {row['Pattern']}\n"
-        message += f"• Example: {row['Example']}\n"
-        message += f"• Korean: {row['Korean']}\n\n"
-    message += f"✏️ 오늘의 작문 주제:\n{topic}"
-    
-    # 파일로 저장 (오후 5시에 재사용)
-    with open("today_message.txt", "w", encoding="utf-8") as f:
-        f.write(message)
-    
-    return message
-
-# =========================
-# 저장된 메시지 불러오기
-# =========================
-def load_saved_message():
-    if os.path.exists("today_message.txt"):
-        with open("today_message.txt", "r", encoding="utf-8") as f:
-            return f.read()
-    else:
-        return None
+def send_message_safe(message):
+    max_len = 4000  # 텔레그램 메시지 안전 길이
+    for i in range(0, len(message), max_len):
+        send_telegram(message[i:i+max_len])
 
 # =========================
 # MAIN
 # =========================
 def main():
-    now = datetime.datetime.now()
-    hour = now.hour
-    
-    # 오전 7시 (Day 메시지 생성)
-    if hour == 7:
-        message = generate_today_message()
-    # 오후 5시 (동일 메시지 재사용)
-    elif hour == 17:
-        message = load_saved_message()
-        if message is None:
-            # 만약 파일이 없으면 새로 생성 (예외 처리)
-            message = generate_today_message()
-    else:
-        # 지정된 시간 외에는 실행하지 않음
-        return
-    
-    send_telegram(message)
+    df = load_patterns()
+    today_df = get_today_patterns(df)
+    message = create_message(today_df)
+    send_message_safe(message)
 
 if __name__ == "__main__":
     main()
