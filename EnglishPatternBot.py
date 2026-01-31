@@ -43,16 +43,19 @@ def load_patterns(file_path="English_90Patterns_with_Korean.xlsx"):
 # =========================
 def get_today_patterns(df):
     now = datetime.utcnow() + pd.Timedelta(hours=9)
-    day_index = (now.day - 1) % 90  # 0~89 인덱스
-    start_row = day_index * 3
-    end_row = start_row + 3
-    # 범위 벗어나면 반복
-    if end_row > len(df):
-        end_row = len(df)
-        start_row = max(0, end_row - 3)
-    today_df = df.iloc[start_row:end_row]
-    print(f"오늘 선택된 패턴 행: {start_row}~{end_row-1}")
+    day_number = (now.day - 1) % 90 + 1  # 1~90 Day
+    # Day 컬럼 숫자 기준 정렬
+    df_sorted = df.sort_values(by="Day")
+    # 오늘 Day에 해당하는 행 선택
+    today_df = df_sorted[df_sorted["Day"] == day_number]
+    # 한 Day에 3개가 없으면, 바로 다음 Day에서 부족분 채우기
+    if len(today_df) < 3:
+        needed = 3 - len(today_df)
+        next_rows = df_sorted[df_sorted["Day"] == ((day_number % 90) + 1)]
+        today_df = pd.concat([today_df, next_rows.head(needed)], ignore_index=True)
+    print(f"오늘 선택된 패턴 Day: {day_number}")
     return today_df
+
 
 # =========================
 # 메시지 생성
