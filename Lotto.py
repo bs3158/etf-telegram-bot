@@ -55,9 +55,10 @@ def send_telegram(message):
 def main():
     data = fetch_all_data()
 
-    # ⭐⭐⭐ 정확한 최신 회차 계산
-    latest_round = max(d["round"] for d in data)
+    # 최신 회차 번호를 draw_no로 구함
+    latest_round = max(d["draw_no"] for d in data)
     next_round = latest_round + 1
+
 
 
     # ——————————————
