@@ -2,9 +2,6 @@ name: English Pattern Daily Bot
 
 on:
   schedule:
-    # 한국 시간 기준
-    # 오전 7시 KST → 전날 22:00 UTC
-    # 오후 5시 KST → 08:00 UTC
     - cron: '0 22 * * *'  # 오전 7시 KST
     - cron: '0 8 * * *'   # 오후 5시 KST
   workflow_dispatch:  # 수동 실행 가능
