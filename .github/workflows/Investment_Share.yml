@@ -21,6 +21,6 @@ jobs:
 
       - name: Run calculation
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }} # Settings -> Secrets에 등록 필요
+          TELEGRAM_TOKEN: ${{ secrets.BOT_TOKEN }} # Settings -> Secrets에 등록 필요
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: python Investment_Share.py
