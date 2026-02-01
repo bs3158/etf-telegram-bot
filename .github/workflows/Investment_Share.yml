@@ -1,4 +1,4 @@
-name: Manual Stock Calc
+name: Investment Share Calc
 
 on:
   workflow_dispatch: # GitHub Actions 탭에서 'Run workflow' 버튼 생성
