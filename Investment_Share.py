@@ -8,7 +8,7 @@ import os
 import sys
 
 # --- 환경 변수 설정 (GitHub Secrets 사용 권장) ---
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+TELEGRAM_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
 INPUT_FILE = "input.xlsx"
 
