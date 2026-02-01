@@ -8,12 +8,12 @@ import os
 import sys
 
 # --- 환경 변수 설정 (GitHub Secrets 사용 권장) ---
-TELEGRAM_TOKEN = os.environ.get("BOT_TOKEN")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
 INPUT_FILE = "input.xlsx"
 
 async def send_telegram_msg(text):
-    bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    bot = telegram.Bot(token=BOT_TOKEN)
     await bot.send_message(chat_id=CHAT_ID, text=text, parse_mode='HTML')
 
 def get_exchange_rate():
