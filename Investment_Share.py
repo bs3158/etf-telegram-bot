@@ -114,7 +114,7 @@ async def main():
                 report.append(f"❌ <b>{code}</b>: 시세 조회 실패\n")
 
         report.append(f"<code>────────────────────</code>")
-        report.append(f"☕ <b>최종 예상 예수금: {total_remaining_cash:,.0f} 원</b>")
+        report.append(f"☕ <b>최종 예상 잔액 예수금: {total_remaining_cash:,.0f} 원</b>")
         report.append(f"✅ 모든 계산이 완료되었습니다.")
 
         await send_telegram_msg("\n".join(report))
