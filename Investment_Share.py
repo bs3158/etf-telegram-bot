@@ -42,7 +42,6 @@ def fetch_price(code, current_rate):
     # 2. 야후 시도 (해외)
     try:
         ticker = yf.Ticker(code)
-        # 종목명(name) 추출 로직 추가
         name = ticker.info.get('longName') or ticker.info.get('shortName') or code
         p = ticker.fast_info.last_price
         
@@ -59,8 +58,6 @@ async def main():
 
         # 2. 엑셀 데이터 읽기
         df = pd.read_excel(INPUT_FILE)
-        
-        # 비어있는 행 제거
         df = df.dropna(subset=['Symbol', 'Weight'])
         total_budget = df['Total_Budget'].iloc[0]
         
@@ -77,8 +74,8 @@ async def main():
 
         # 4. 환율 및 시세 계산 시작
         rate = get_exchange_rate()
+        total_remaining_cash = 0 # 최종 남은 예수금 합계
         
-        # 헤더 디자인 수정
         report = [
             f"<b>📝 자산 배분 매수 리포트</b>",
             f"<code>────────────────────</code>",
@@ -92,24 +89,28 @@ async def main():
             code = str(row['Symbol']).strip().upper()
             weight = float(row['Weight'])
             
-            # name 정보를 포함하여 fetch
             name, price_krw, label = fetch_price(code, rate)
             
             if price_krw:
                 budget = total_budget * (weight / 100)
                 qty = int(budget // price_krw)
+                spent = qty * price_krw
+                remaining = budget - spent # 해당 종목 할당금 중 남은 금액
+                total_remaining_cash += remaining # 전체 예수금에 합산
                 
-                # 가독성을 높인 본문 디자인
                 report.append(f"<b>🔹 {name}</b> (<code>{code}</code>)")
-                report.append(f"  └ 비중: <b>{weight}%</b>")
+                report.append(f"  └ 비중: <b>{weight}%</b> (할당: {budget:,.0f}원)")
                 report.append(f"  └ 현재가: <code>{label}</code>")
                 report.append(f"  └ <b>매수 수량: {qty} 주</b>")
-                report.append("") # 종목 간 간격
+                report.append(f"  └ 남은잔액: {remaining:,.0f} 원")
+                report.append("") 
             else:
                 report.append(f"❌ <b>{code}</b>: 시세 조회 실패\n")
 
+        # 최하단에 합계 정보 추가
         report.append(f"<code>────────────────────</code>")
-        report.append(f"✅ 계산이 완료되었습니다.")
+        report.append(f"☕ <b>최종 예상 예수금: {total_remaining_cash:,.0f} 원</b>")
+        report.append(f"✅ 모든 계산이 완료되었습니다.")
 
         # 5. 결과 전송
         await send_telegram_msg("\n".join(report))
