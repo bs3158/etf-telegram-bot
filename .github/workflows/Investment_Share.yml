@@ -1,0 +1,26 @@
+name: Manual Stock Calc
+
+on:
+  workflow_dispatch: # GitHub Actions 탭에서 'Run workflow' 버튼 생성
+
+jobs:
+  run-calc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install yfinance pandas openpyxl requests beautifulsoup4 python-telegram-bot
+
+      - name: Run calculation
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }} # Settings -> Secrets에 등록 필요
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python Investment_Share.py
