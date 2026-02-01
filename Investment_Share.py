@@ -29,16 +29,26 @@ def fetch_price(code, current_rate):
         url = f"https://finance.naver.com/item/main.naver?code={code}"
         res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=3)
         soup = BeautifulSoup(res.text, "html.parser")
-        tag = soup.select_one("p.no_today span.blind")
-        if tag: return int(tag.text.replace(",", "")), "KRW"
+        
+        name_tag = soup.select_one(".wrap_company h2 a")
+        price_tag = soup.select_one("p.no_today span.blind")
+        
+        if name_tag and price_tag:
+            name = name_tag.text
+            price = int(price_tag.text.replace(",", ""))
+            return name, price, "KRW"
     except: pass
     
     # 2. 야후 시도 (해외)
     try:
-        p = yf.Ticker(code).fast_info.last_price
-        if p: return p * current_rate, f"USD (${p:.2f})"
+        ticker = yf.Ticker(code)
+        # 종목명(name) 추출 로직 추가
+        name = ticker.info.get('longName') or ticker.info.get('shortName') or code
+        p = ticker.fast_info.last_price
+        
+        if p: return name, p * current_rate, f"USD (${p:.2f})"
     except: pass
-    return None, None
+    return None, None, None
 
 async def main():
     try:
@@ -50,44 +60,63 @@ async def main():
         # 2. 엑셀 데이터 읽기
         df = pd.read_excel(INPUT_FILE)
         
-        # 비어있는 행 제거 및 종목 수 파악
+        # 비어있는 행 제거
         df = df.dropna(subset=['Symbol', 'Weight'])
         total_budget = df['Total_Budget'].iloc[0]
         
         # 3. 비중 합계 검증
         total_weight = df['Weight'].sum()
         if abs(total_weight - 100) > 0.01:
-            msg = f"⚠️ <b>투자 비중 오류</b>\n현재 입력된 비중의 합이 <b>{total_weight}%</b>입니다.\n합계를 100%로 맞춰서 다시 입력해주세요."
+            msg = (
+                f"<b>⚠️ 투자 비중 설정 오류</b>\n\n"
+                f"현재 입력된 비중 합계: <b>{total_weight}%</b>\n"
+                f"정확히 <b>100%</b>가 되도록 수정 후 다시 실행해 주세요."
+            )
             await send_telegram_msg(msg)
             return
 
         # 4. 환율 및 시세 계산 시작
         rate = get_exchange_rate()
-        report = [f"<b>📊 수동 실행 매수 리포트</b>"]
-        report.append(f"기준 환율: {rate:,.2f}원 (종목 수: {len(df)}개)\n" + "="*25)
+        
+        # 헤더 디자인 수정
+        report = [
+            f"<b>📝 자산 배분 매수 리포트</b>",
+            f"<code>────────────────────</code>",
+            f"💵 <b>기준 환율:</b> {rate:,.2f} 원",
+            f"📦 <b>대상 종목:</b> {len(df)} 개",
+            f"💰 <b>총 투자금:</b> {total_budget:,.0f} 원",
+            f"<code>────────────────────</code>\n"
+        ]
 
         for _, row in df.iterrows():
             code = str(row['Symbol']).strip().upper()
             weight = float(row['Weight'])
             
-            price_krw, label = fetch_price(code, rate)
+            # name 정보를 포함하여 fetch
+            name, price_krw, label = fetch_price(code, rate)
             
             if price_krw:
                 budget = total_budget * (weight / 100)
                 qty = int(budget // price_krw)
-                report.append(f"📍 <b>{code}</b> ({weight}%)")
-                report.append(f"  • 현재가: {label}")
-                report.append(f"  • 매수 수량: <b>{qty}주</b>")
-                report.append("-" * 20)
+                
+                # 가독성을 높인 본문 디자인
+                report.append(f"<b>🔹 {name}</b> (<code>{code}</code>)")
+                report.append(f"  └ 비중: <b>{weight}%</b>")
+                report.append(f"  └ 현재가: <code>{label}</code>")
+                report.append(f"  └ <b>매수 수량: {qty} 주</b>")
+                report.append("") # 종목 간 간격
             else:
-                report.append(f"❌ {code}: 시세 조회 실패")
+                report.append(f"❌ <b>{code}</b>: 시세 조회 실패\n")
+
+        report.append(f"<code>────────────────────</code>")
+        report.append(f"✅ 계산이 완료되었습니다.")
 
         # 5. 결과 전송
         await send_telegram_msg("\n".join(report))
         print("Telegram 리포트 전송 완료")
 
     except Exception as e:
-        await send_telegram_msg(f"⚠️ 시스템 오류 발생: {str(e)}")
+        await send_telegram_msg(f"⚠️ <b>시스템 오류 발생</b>\n<code>{str(e)}</code>")
 
 if __name__ == "__main__":
     asyncio.run(main())
