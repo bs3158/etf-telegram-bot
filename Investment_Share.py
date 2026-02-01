@@ -10,7 +10,7 @@ import sys
 # --- 환경 변수 설정 (GitHub Secrets 사용 권장) ---
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
-INPUT_FILE = "input.xlsx"
+INPUT_FILE = "input.txt"  # TXT 파일로 변경
 
 async def send_telegram_msg(text):
     bot = telegram.Bot(token=BOT_TOKEN)
@@ -51,18 +51,34 @@ def fetch_price(code, current_rate):
 
 async def main():
     try:
-        # 1. 엑셀 파일 존재 여부 확인
+        # 1. TXT 파일 존재 여부 확인
         if not os.path.exists(INPUT_FILE):
             print(f"Error: {INPUT_FILE} 파일을 찾을 수 없습니다.")
             return
 
-        # 2. 엑셀 데이터 읽기
-        df = pd.read_excel(INPUT_FILE)
-        df = df.dropna(subset=['Symbol', 'Weight'])
-        total_budget = df['Total_Budget'].iloc[0]
+        # 2. TXT 데이터 읽기 및 파싱
+        with open(INPUT_FILE, "r", encoding="utf-8") as f:
+            lines = [line.strip() for line in f.readlines() if line.strip()]
+        
+        if not lines:
+            print("파일 내용이 비어있습니다.")
+            return
+
+        # 첫 번째 줄은 총 투자금
+        total_budget = float(lines[0])
+        
+        # 두 번째 줄부터 종목 정보 추출
+        stock_data = []
+        total_weight = 0.0
+        for line in lines[1:]:
+            parts = line.split(",")
+            if len(parts) == 2:
+                symbol = parts[0].strip().upper()
+                weight = float(parts[1].strip())
+                stock_data.append({"Symbol": symbol, "Weight": weight})
+                total_weight += weight
         
         # 3. 비중 합계 검증
-        total_weight = df['Weight'].sum()
         if abs(total_weight - 100) > 0.01:
             msg = (
                 f"<b>⚠️ 투자 비중 설정 오류</b>\n\n"
@@ -74,20 +90,20 @@ async def main():
 
         # 4. 환율 및 시세 계산 시작
         rate = get_exchange_rate()
-        total_remaining_cash = 0 # 최종 남은 예수금 합계
+        total_remaining_cash = 0 
         
         report = [
             f"<b>📝 자산 배분 매수 리포트</b>",
             f"<code>────────────────────</code>",
             f"💵 <b>기준 환율:</b> {rate:,.2f} 원",
-            f"📦 <b>대상 종목:</b> {len(df)} 개",
+            f"📦 <b>대상 종목:</b> {len(stock_data)} 개",
             f"💰 <b>총 투자금:</b> {total_budget:,.0f} 원",
             f"<code>────────────────────</code>\n"
         ]
 
-        for _, row in df.iterrows():
-            code = str(row['Symbol']).strip().upper()
-            weight = float(row['Weight'])
+        for item in stock_data:
+            code = item["Symbol"]
+            weight = item["Weight"]
             
             name, price_krw, label = fetch_price(code, rate)
             
@@ -95,8 +111,8 @@ async def main():
                 budget = total_budget * (weight / 100)
                 qty = int(budget // price_krw)
                 spent = qty * price_krw
-                remaining = budget - spent # 해당 종목 할당금 중 남은 금액
-                total_remaining_cash += remaining # 전체 예수금에 합산
+                remaining = budget - spent
+                total_remaining_cash += remaining
                 
                 report.append(f"<b>🔹 {name}</b> (<code>{code}</code>)")
                 report.append(f"  └ 비중: <b>{weight}%</b> (할당: {budget:,.0f}원)")
@@ -107,7 +123,6 @@ async def main():
             else:
                 report.append(f"❌ <b>{code}</b>: 시세 조회 실패\n")
 
-        # 최하단에 합계 정보 추가
         report.append(f"<code>────────────────────</code>")
         report.append(f"☕ <b>최종 예상 예수금: {total_remaining_cash:,.0f} 원</b>")
         report.append(f"✅ 모든 계산이 완료되었습니다.")
