@@ -14,7 +14,7 @@ RSS_LIST = [
     "https://www.hani.co.kr/rss/",    # 한겨레 경제
     "https://www.hankyung.com/feed/economy",   # 한국경제
     "https://www.mk.co.kr/rss/30000001/",      # 매일경제
-    "http://rss.cnn.com/rss/edition_business.rss" # CNN 최신 비즈니스 RSS
+    "http://rss.cnn.com/rss/edition.rss"       # ⚠️ 404 오류가 없는 CNN 최신 종합 피드로 변경
 ]
 
 translator = Translator()
@@ -55,17 +55,11 @@ def collect_and_send():
         feed = feedparser.parse(rss_url)
         source_news = []
         for entry in feed.entries[:5]:
-            # --- CNN 구형 링크(money.cnn.com)를 신형 링크로 강제 변환 ---
-            link = entry.link
-            if "money.cnn.com" in link:
-                # money.cnn.com/2017/... 형식을 edition.cnn.com/business/... 형식으로 추정 변환
-                # 하지만 가장 확실한 방법은 RSS에서 주는 원본 링크를 그대로 신뢰하되 도메인만 교체 시도
-                link = link.replace("money.cnn.com", "edition.cnn.com/business")
-            
+            # RSS에서 제공하는 요약문 확보
             rss_summary = getattr(entry, 'summary', '') or getattr(entry, 'description', '')
             source_news.append({
                 "title": entry.title,
-                "link": link,
+                "link": entry.link,
                 "rss_summary": rss_summary
             })
         all_chunks.append(source_news)
@@ -79,10 +73,10 @@ def collect_and_send():
         for idx, item in enumerate(chunk):
             title = item['title']
             
-            # CNN은 RSS 요약 사용, 국내 매체는 본문 크롤링 요약 사용
+            # CNN(4번째)은 RSS 요약 사용 (보안 차단 방지)
             if current_num == 4:
                 summary = re.sub('<[^<]+?>', '', item['rss_summary']).strip()
-                if not summary: summary = "최신 세부정보는 기사 링크를 참조하세요."
+                if not summary: summary = "기사 링크를 통해 자세한 내용을 확인하세요."
             else:
                 summary = get_summary(item['link'])
 
