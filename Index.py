@@ -1,34 +1,70 @@
 import os
 import requests
 import yfinance as yf
-from datetime import datetime
+import pytz
+from datetime import datetime, time
 
+
+# =============================
+# Telegram
+# =============================
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
 
-# =============================
-# 텔레그램 전송
-# =============================
 def send_telegram(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-    requests.post(url, data={
+    res = requests.post(url, data={
         "chat_id": CHAT_ID,
         "text": text,
         "disable_web_page_preview": True
     })
 
+    print(res.status_code, res.text)
+
 
 # =============================
-# 안전 가격 조회 (핵심 안정화)
+# Timezone (DST 자동 적용)
 # =============================
-def get_close(ticker):
+KST = pytz.timezone("Asia/Seoul")
+NY = pytz.timezone("America/New_York")
+
+
+# =============================
+# 시장 시간 판단
+# =============================
+def is_korea_open(now):
+    return time(9, 0) <= now.time() <= time(15, 30)
+
+
+def is_us_open():
+    now = datetime.now(NY)
+    return time(9, 30) <= now.time() <= time(16, 0)
+
+
+# =============================
+# 가격 조회 (실시간 + 종가 + 휴장 처리)
+# =============================
+def get_price(ticker, market="KR"):
+
     try:
-        df = yf.Ticker(ticker).history(period="1d")
+        now_kst = datetime.now(KST)
+
+        if market == "KR":
+            if is_korea_open(now_kst):
+                df = yf.Ticker(ticker).history(period="1d", interval="1m")
+            else:
+                df = yf.Ticker(ticker).history(period="1d")
+
+        else:  # US
+            if is_us_open():
+                df = yf.Ticker(ticker).history(period="1d", interval="1m")
+            else:
+                df = yf.Ticker(ticker).history(period="1d")
 
         if df.empty or df["Close"].dropna().empty:
-            return None  # ⭐ 조회 실패
+            return None
 
         return round(float(df["Close"].iloc[-1]), 2)
 
@@ -37,74 +73,66 @@ def get_close(ticker):
 
 
 # =============================
-# 값 표시용 포맷
+# None 처리
 # =============================
-def fmt(value):
-    if value is None:
-        return "전날 휴장이나 공휴일로 인하여 조회할 수 없습니다."
-    return f"{value:,}"
+def safe(v):
+    if v is None:
+        return "❌ 전날 휴장이나 공휴일로 인하여 조회할 수 없습니다."
+    return v
 
 
 # =============================
-# MAIN
+# 메인
 # =============================
 def main():
 
-    # ========= 미국 =========
-    sp500 = get_close("^GSPC")
-    nasdaq = get_close("^IXIC")
+    # 🇺🇸 미국
+    sp500 = get_price("^GSPC", "US")
+    nasdaq = get_price("^IXIC", "US")
+    gold_usd = get_price("GC=F", "US")
 
-    # ========= 한국 =========
-    kospi = get_close("^KS11")
-    kosdaq = get_close("^KQ11")
+    # 🇰🇷 한국
+    kospi = get_price("^KS11", "KR")
+    kosdaq = get_price("^KQ11", "KR")
 
-    # ========= 환율 =========
-    usdkrw = get_close("KRW=X")
+    # 환율
+    usdkrw = get_price("KRW=X", "US")
 
-    # ========= 금 =========
-    gold_usd = get_close("GC=F")  # 국제 금 (USD/oz)
-
-    # ========= 기준금리 (수동 입력) =========
+    # 기준금리 (직접 수정 가능)
     us_rate = "3.75%"
     kr_rate = "2.50%"
 
-    # ========= 금 계산 =========
-    if gold_usd is None or usdkrw is None:
-        gold_us_text = "전날 휴장이나 공휴일로 인하여 조회할 수 없습니다."
-        gold_kr_text = "전날 휴장이나 공휴일로 인하여 조회할 수 없습니다."
-    else:
+    # =============================
+    # 금 1돈 계산
+    # =============================
+    if gold_usd and usdkrw:
         gold_krw_oz = gold_usd * usdkrw
+        gold_per_don = gold_krw_oz * (3.75 / 31.1035)
+        gold_per_don = round(gold_per_don)
+    else:
+        gold_per_don = None
 
-        # ⭐ 1돈 = 3.75g / 1oz = 31.1035g
-        gold_per_don = round(gold_krw_oz * (3.75 / 31.1035))
+    now = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
 
-        gold_us_text = f"{gold_usd:,} USD/oz"
-        gold_kr_text = f"{gold_per_don:,} 원/돈"
-
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-
-    # =============================
-    # 메시지 생성
-    # =============================
     message = (
         f"📊 시장 요약 ({now})\n\n"
 
         f"🇺🇸 미국\n"
-        f"🟢 S&P500 : {fmt(sp500)}\n"
-        f"🔵 NASDAQ : {fmt(nasdaq)}\n"
+        f"🟢 S&P500 : {safe(sp500)}\n"
+        f"🟢 NASDAQ : {safe(nasdaq)}\n"
         f"🏦 기준금리(Fed) : {us_rate}\n\n"
 
         f"🇰🇷 한국\n"
-        f"🟡 KOSPI : {fmt(kospi)}\n"
-        f"🟣 KOSDAQ : {fmt(kosdaq)}\n"
+        f"🔵 KOSPI : {safe(kospi)}\n"
+        f"🔵 KOSDAQ : {safe(kosdaq)}\n"
         f"🏦 기준금리(BoK) : {kr_rate}\n\n"
 
         f"💱 환율\n"
-        f"USD/KRW : {fmt(usdkrw)}\n\n"
+        f"💵 USD/KRW : {safe(usdkrw)}\n\n"
 
         f"🥇 금 시세\n"
-        f"🌍 국제 : {gold_us_text}\n"
-        f"🇰🇷 한국(1돈) : {gold_kr_text}"
+        f"🌍 국제 : {safe(gold_usd)} USD/oz\n"
+        f"🇰🇷 한국(1돈) : {safe(gold_per_don):,} KRW"
     )
 
     send_telegram(message)
