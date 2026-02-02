@@ -14,7 +14,7 @@ RSS_LIST = [
     "https://www.hani.co.kr/rss/",    # 한겨레 경제
     "https://www.hankyung.com/feed/economy",   # 한국경제
     "https://www.mk.co.kr/rss/30000001/",      # 매일경제
-    "http://rss.cnn.com/rss/edition.rss"       # ⚠️ 404 오류가 없는 CNN 최신 종합 피드로 변경
+    "http://rss.cnn.com/rss/cnn_topstories.rss" # ✅ 최신 실시간 TOP 뉴스 피드로 변경
 ]
 
 translator = Translator()
@@ -52,10 +52,10 @@ def collect_and_send():
     all_chunks = []
 
     for rss_url in RSS_LIST:
+        # 최신 데이터를 강제로 가져오기 위해 feedparser 설정
         feed = feedparser.parse(rss_url)
         source_news = []
         for entry in feed.entries[:5]:
-            # RSS에서 제공하는 요약문 확보
             rss_summary = getattr(entry, 'summary', '') or getattr(entry, 'description', '')
             source_news.append({
                 "title": entry.title,
@@ -73,7 +73,7 @@ def collect_and_send():
         for idx, item in enumerate(chunk):
             title = item['title']
             
-            # CNN(4번째)은 RSS 요약 사용 (보안 차단 방지)
+            # CNN(4번째)은 RSS 요약 사용, 국내 매체는 본문 크롤링 요약 사용
             if current_num == 4:
                 summary = re.sub('<[^<]+?>', '', item['rss_summary']).strip()
                 if not summary: summary = "기사 링크를 통해 자세한 내용을 확인하세요."
