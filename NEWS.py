@@ -14,7 +14,7 @@ RSS_LIST = [
     "https://www.hani.co.kr/rss/",    # 한겨레 경제
     "https://www.hankyung.com/feed/economy",   # 한국경제
     "https://www.mk.co.kr/rss/30000001/",      # 매일경제
-    "https://www.cnbc.com/id/10001147/device/rss/rss.html" # CNBC (영어)
+    "http://rss.cnn.com/rss/edition_business.rss" # CNN Business (영어) 로 변경
 ]
 
 translator = Translator()
@@ -35,7 +35,7 @@ def get_summary(url):
         r = requests.get(url, timeout=8, headers=headers)
         r.encoding = 'utf-8'
         soup = BeautifulSoup(r.text, "html.parser")
-        
+
         for s in soup(['script', 'style', 'header', 'footer', 'nav', 'aside']):
             s.decompose()
 
@@ -50,7 +50,7 @@ def get_summary(url):
 
 def collect_and_send():
     all_chunks = []
-    
+
     for rss_url in RSS_LIST:
         feed = feedparser.parse(rss_url)
         # 각 사이트(소스)에서 정확히 상위 5개만 추출
@@ -65,15 +65,15 @@ def collect_and_send():
     # 4개의 사이트 결과물을 각각 메시지 한 통(5개 기사)씩 보냄
     for i, chunk in enumerate(all_chunks):
         current_num = i + 1
-        source_name = ["한겨레", "한국경제", "매일경제", "CNBC(해외)"][i]
-        
+        source_name = ["한겨레", "한국경제", "매일경제", "CNN(해외)"][i] # 명칭 변경
+
         message = f"<b>🚀 실시간 주요 뉴스 ({current_num}/4) - {source_name}</b>\n\n"
-        
+
         for idx, item in enumerate(chunk):
             title = item['title']
             summary = get_summary(item['link'])
-            
-            # 4번째 소스(CNBC)이거나 제목에 영어가 많으면 번역
+
+            # 4번째 소스(CNN)이거나 제목에 영어가 많으면 번역
             if current_num == 4 or re.search('[a-zA-Z]{5,}', title):
                 title = f"[번역] " + translate_text(title)
                 summary = translate_text(summary)
@@ -82,7 +82,7 @@ def collect_and_send():
             message += f"📝 {summary}\n"
             message += f"🔗 <a href='{item['link']}'>기사 보기</a>\n\n"
             message += "--------------------------\n\n"
-        
+
         # 각 사이트별로 메시지 전송
         send_to_telegram(message)
 
