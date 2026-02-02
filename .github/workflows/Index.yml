@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install yfinance pandas openpyxl requests beautifulsoup4 python-telegram-bot
+          pip install yfinance pandas openpyxl requests beautifulsoup4 python-telegram-bot matplotlib
 
 
       - name: Run Index bot
