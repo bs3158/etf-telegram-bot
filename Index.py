@@ -17,6 +17,7 @@ NY = pytz.timezone("America/New_York")
 # =========================
 def send_telegram(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
     requests.post(url, data={
         "chat_id": CHAT_ID,
         "text": text,
@@ -25,7 +26,7 @@ def send_telegram(text):
 
 
 # =========================
-# 안전 가격 조회 (핵심 수정)
+# 안전 가격 조회
 # =========================
 def get_price(ticker, realtime=False):
     try:
@@ -59,7 +60,7 @@ def is_us_open():
 
 
 # =========================
-# 포맷 안전 함수 (핵심 추가)
+# 포맷
 # =========================
 def fmt(v):
     if v is None:
@@ -75,20 +76,43 @@ def main():
     kr_live = is_korea_open()
     us_live = is_us_open()
 
+    # =====================
+    # 지수
+    # =====================
     sp500 = get_price("^GSPC", us_live)
     nasdaq = get_price("^IXIC", us_live)
     kospi = get_price("^KS11", kr_live)
     kosdaq = get_price("^KQ11", kr_live)
+
+    # =====================
+    # 환율
+    # =====================
     usdkrw = get_price("KRW=X", True)
+
+    # =====================
+    # 금 (국제)
+    # =====================
     gold_usd = get_price("GC=F", True)
 
+    gold_krw_oz = None
+    if gold_usd and usdkrw:
+        gold_krw_oz = round(gold_usd * usdkrw, 0)
+
+    # =====================
+    # 한국 금거래소 (KRX ETF 활용)
+    # =====================
+    krx_gold = get_price("132030.KS", kr_live)
+
+    # =====================
+    # 구리
+    # =====================
+    copper = get_price("HG=F", True)
+
+    # =====================
+    # 금리 (수동)
+    # =====================
     us_rate = "3.75%"
     kr_rate = "2.50%"
-
-    gold_krw_don = None
-    if gold_usd and usdkrw:
-        oz_to_don = 31.1035 / 3.75
-        gold_krw_don = round(gold_usd * usdkrw / oz_to_don, 0)
 
     now = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
 
@@ -109,8 +133,11 @@ def main():
         f"USD/KRW : {fmt(usdkrw)}\n\n"
 
         f"🥇 금 시세\n"
-        f"국제 : {fmt(gold_usd)} USD/oz\n"
-        f"한국(1돈) : {fmt(gold_krw_don)} 원"
+        f"국제 : {fmt(gold_usd)} USD/oz  (≈ {fmt(gold_krw_oz)} 원/oz)\n"
+        f"한국(KRX) : {fmt(krx_gold)} 원\n\n"
+
+        f"🔶 구리 시세\n"
+        f"{fmt(copper)} USD/lb"
     )
 
     send_telegram(message)
