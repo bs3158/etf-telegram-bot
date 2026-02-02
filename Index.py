@@ -1,69 +1,42 @@
 import os
 import requests
 import yfinance as yf
+from datetime import datetime
 import pytz
-from datetime import datetime, time
 
 
-# =============================
-# Telegram
-# =============================
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
+KST = pytz.timezone("Asia/Seoul")
+NY = pytz.timezone("America/New_York")
 
+
+# =========================
+# 텔레그램
+# =========================
 def send_telegram(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-
-    res = requests.post(url, data={
+    requests.post(url, data={
         "chat_id": CHAT_ID,
         "text": text,
         "disable_web_page_preview": True
     })
 
-    print(res.status_code, res.text)
 
-
-# =============================
-# Timezone (DST 자동 적용)
-# =============================
-KST = pytz.timezone("Asia/Seoul")
-NY = pytz.timezone("America/New_York")
-
-
-# =============================
-# 시장 시간 판단
-# =============================
-def is_korea_open(now):
-    return time(9, 0) <= now.time() <= time(15, 30)
-
-
-def is_us_open():
-    now = datetime.now(NY)
-    return time(9, 30) <= now.time() <= time(16, 0)
-
-
-# =============================
-# 가격 조회 (실시간 + 종가 + 휴장 처리)
-# =============================
-def get_price(ticker, market="KR"):
-
+# =========================
+# 안전 가격 조회 (핵심 수정)
+# =========================
+def get_price(ticker, realtime=False):
     try:
-        now_kst = datetime.now(KST)
+        t = yf.Ticker(ticker)
 
-        if market == "KR":
-            if is_korea_open(now_kst):
-                df = yf.Ticker(ticker).history(period="1d", interval="1m")
-            else:
-                df = yf.Ticker(ticker).history(period="1d")
+        if realtime:
+            df = t.history(period="1d", interval="1m")
+        else:
+            df = t.history(period="1d")
 
-        else:  # US
-            if is_us_open():
-                df = yf.Ticker(ticker).history(period="1d", interval="1m")
-            else:
-                df = yf.Ticker(ticker).history(period="1d")
-
-        if df.empty or df["Close"].dropna().empty:
+        if df.empty:
             return None
 
         return round(float(df["Close"].iloc[-1]), 2)
@@ -72,45 +45,50 @@ def get_price(ticker, market="KR"):
         return None
 
 
-# =============================
-# None 처리
-# =============================
-def safe(v):
+# =========================
+# 장 시간 체크
+# =========================
+def is_korea_open():
+    now = datetime.now(KST)
+    return now.weekday() < 5 and 9 <= now.hour < 15
+
+
+def is_us_open():
+    now = datetime.now(NY)
+    return now.weekday() < 5 and 9 <= now.hour < 16
+
+
+# =========================
+# 포맷 안전 함수 (핵심 추가)
+# =========================
+def fmt(v):
     if v is None:
-        return "❌ 전날 휴장이나 공휴일로 인하여 조회할 수 없습니다."
-    return v
+        return "전날 휴장이나 공휴일로 인하여 조회할 수 없습니다."
+    return f"{v:,}"
 
 
-# =============================
-# 메인
-# =============================
+# =========================
+# MAIN
+# =========================
 def main():
 
-    # 🇺🇸 미국
-    sp500 = get_price("^GSPC", "US")
-    nasdaq = get_price("^IXIC", "US")
-    gold_usd = get_price("GC=F", "US")
+    kr_live = is_korea_open()
+    us_live = is_us_open()
 
-    # 🇰🇷 한국
-    kospi = get_price("^KS11", "KR")
-    kosdaq = get_price("^KQ11", "KR")
+    sp500 = get_price("^GSPC", us_live)
+    nasdaq = get_price("^IXIC", us_live)
+    kospi = get_price("^KS11", kr_live)
+    kosdaq = get_price("^KQ11", kr_live)
+    usdkrw = get_price("KRW=X", True)
+    gold_usd = get_price("GC=F", True)
 
-    # 환율
-    usdkrw = get_price("KRW=X", "US")
-
-    # 기준금리 (직접 수정 가능)
     us_rate = "3.75%"
     kr_rate = "2.50%"
 
-    # =============================
-    # 금 1돈 계산
-    # =============================
+    gold_krw_don = None
     if gold_usd and usdkrw:
-        gold_krw_oz = gold_usd * usdkrw
-        gold_per_don = gold_krw_oz * (3.75 / 31.1035)
-        gold_per_don = round(gold_per_don)
-    else:
-        gold_per_don = None
+        oz_to_don = 31.1035 / 3.75
+        gold_krw_don = round(gold_usd * usdkrw / oz_to_don, 0)
 
     now = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
 
@@ -118,21 +96,21 @@ def main():
         f"📊 시장 요약 ({now})\n\n"
 
         f"🇺🇸 미국\n"
-        f"🟢 S&P500 : {safe(sp500)}\n"
-        f"🟢 NASDAQ : {safe(nasdaq)}\n"
-        f"🏦 기준금리(Fed) : {us_rate}\n\n"
+        f"S&P500 : {fmt(sp500)} 🔵\n"
+        f"NASDAQ : {fmt(nasdaq)} 🔵\n"
+        f"기준금리(Fed) : {us_rate}\n\n"
 
         f"🇰🇷 한국\n"
-        f"🔵 KOSPI : {safe(kospi)}\n"
-        f"🔵 KOSDAQ : {safe(kosdaq)}\n"
-        f"🏦 기준금리(BoK) : {kr_rate}\n\n"
+        f"KOSPI : {fmt(kospi)} 🔴\n"
+        f"KOSDAQ : {fmt(kosdaq)} 🔴\n"
+        f"기준금리(BoK) : {kr_rate}\n\n"
 
         f"💱 환율\n"
-        f"💵 USD/KRW : {safe(usdkrw)}\n\n"
+        f"USD/KRW : {fmt(usdkrw)}\n\n"
 
         f"🥇 금 시세\n"
-        f"🌍 국제 : {safe(gold_usd)} USD/oz\n"
-        f"🇰🇷 한국(1돈) : {safe(gold_per_don):,} KRW"
+        f"국제 : {fmt(gold_usd)} USD/oz\n"
+        f"한국(1돈) : {fmt(gold_krw_don)} 원"
     )
 
     send_telegram(message)
