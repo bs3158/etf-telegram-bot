@@ -14,7 +14,7 @@ RSS_LIST = [
     "https://www.hani.co.kr/rss/",    # 한겨레 경제
     "https://www.hankyung.com/feed/economy",   # 한국경제
     "https://www.mk.co.kr/rss/30000001/",      # 매일경제
-    "http://rss.cnn.com/rss/edition_business.rss" # 최신 CNN Business RSS
+    "https://rss.cnn.com/rss/edition_business.rss" # 최신 CNN Business (HTTPS 적용)
 ]
 
 translator = Translator()
@@ -22,12 +22,35 @@ translator = Translator()
 def translate_text(text):
     try:
         if not text or text.strip() == "": return text
-        # HTML 태그 제거 후 번역
-        clean_text = re.sub('<[^<]+?>', '', text)
-        result = translator.translate(clean_text, dest='ko')
+        result = translator.translate(text, dest='ko')
         return result.text
     except:
         return text
+
+def get_summary(url, is_foreign=False):
+    """국내 매체는 본문 분석, 해외 매체(CNN)는 차단 방지를 위해 RSS 요약을 우선 사용합니다."""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+        r = requests.get(url, timeout=8, headers=headers)
+        r.encoding = 'utf-8'
+        
+        # 접근 차단되었거나 해외 매체인 경우 RSS 요약을 쓸 수 있도록 예외 반환
+        if r.status_code != 200 or is_foreign:
+            return None
+
+        soup = BeautifulSoup(r.text, "html.parser")
+        for s in soup(['script', 'style', 'header', 'footer', 'nav', 'aside', 'form']):
+            s.decompose()
+
+        text = soup.get_text(" ", strip=True)
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        valid_sentences = [s for s in sentences if 40 < len(s) < 200]
+        summary = " ".join(valid_sentences[:2])
+        return summary if summary else None
+    except:
+        return None
 
 def collect_and_send():
     for i, rss_url in enumerate(RSS_LIST):
@@ -38,22 +61,24 @@ def collect_and_send():
 
         message = f"<b>🚀 실시간 주요 뉴스 ({current_num}/4) - {source_name}</b>\n\n"
 
-        # 각 사이트에서 상위 5개 추출
         for idx, entry in enumerate(feed.entries[:5]):
             title = entry.title
             link = entry.link
             
-            # 본문에 접속하는 대신 RSS 피드에 포함된 요약(description/summary) 사용
-            # CNN은 RSS 피드 안에 이미 짧은 요약문을 제공합니다.
-            raw_summary = getattr(entry, 'summary', '') or getattr(entry, 'description', '')
+            # 1. 국내 매체는 본문 추출 시도, CNN(4번째)은 바로 RSS 요약 활용
+            is_foreign = (current_num == 4)
+            summary = get_summary(link, is_foreign)
             
-            # 불필요한 HTML 태그 및 공백 제거
-            summary = re.sub('<[^<]+?>', '', raw_summary).strip()
-            if not summary or len(summary) < 10:
-                summary = "요약 정보가 제공되지 않는 기사입니다."
+            # 2. 본문 추출 실패 시 RSS 내부 요약 정보 사용
+            if not summary:
+                raw_rss_summary = getattr(entry, 'summary', '') or getattr(entry, 'description', '')
+                summary = re.sub('<[^<]+?>', '', raw_rss_summary).strip()
+            
+            if not summary or len(summary) < 5:
+                summary = "본문 요약 정보를 가져올 수 없습니다."
 
-            # 4번째 소스(CNN)이거나 제목에 영어가 많으면 번역
-            if current_num == 4 or re.search('[a-zA-Z]{7,}', title):
+            # CNN 또는 영문 제목 번역
+            if is_foreign or re.search('[a-zA-Z]{7,}', title):
                 title = f"[번역] " + translate_text(title)
                 summary = translate_text(summary)
 
