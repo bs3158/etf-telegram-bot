@@ -4,7 +4,6 @@ import yfinance as yf
 from datetime import datetime
 import pytz
 
-
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
@@ -26,28 +25,53 @@ def send_telegram(text):
 
 
 # =========================
-# 안전 가격 조회
+# 가격 조회 (현재 + 전일)
 # =========================
-def get_price(ticker, realtime=False):
+def get_price_info(ticker, realtime=False):
     try:
         t = yf.Ticker(ticker)
 
         if realtime:
-            df = t.history(period="1d", interval="1m")
+            df = t.history(period="2d", interval="1m")
         else:
-            df = t.history(period="1d")
+            df = t.history(period="2d")
 
-        if df.empty:
+        if len(df) < 2:
             return None
 
-        return round(float(df["Close"].iloc[-1]), 2)
+        now = float(df["Close"].iloc[-1])
+        prev = float(df["Close"].iloc[-2])
+
+        change = now - prev
+        pct = (change / prev) * 100
+
+        return round(now, 2), round(pct, 2)
 
     except:
         return None
 
 
 # =========================
-# 장 시간 체크
+# 포맷 + 이모지
+# =========================
+def fmt(info):
+    if info is None:
+        return "조회불가"
+
+    price, pct = info
+
+    if pct > 0:
+        icon = "🔴▲"
+    elif pct < 0:
+        icon = "🔵▼"
+    else:
+        icon = "⚪"
+
+    return f"{price:,} ({pct:+.2f}%) {icon}"
+
+
+# =========================
+# 장 시간
 # =========================
 def is_korea_open():
     now = datetime.now(KST)
@@ -60,15 +84,6 @@ def is_us_open():
 
 
 # =========================
-# 포맷
-# =========================
-def fmt(v):
-    if v is None:
-        return "전날 휴장이나 공휴일로 인하여 조회할 수 없습니다."
-    return f"{v:,}"
-
-
-# =========================
 # MAIN
 # =========================
 def main():
@@ -76,41 +91,37 @@ def main():
     kr_live = is_korea_open()
     us_live = is_us_open()
 
-    # =====================
-    # 지수
-    # =====================
-    sp500 = get_price("^GSPC", us_live)
-    nasdaq = get_price("^IXIC", us_live)
-    kospi = get_price("^KS11", kr_live)
-    kosdaq = get_price("^KQ11", kr_live)
+    # ===== 지수 =====
+    sp500 = get_price_info("^GSPC", us_live)
+    nasdaq = get_price_info("^IXIC", us_live)
+    kospi = get_price_info("^KS11", kr_live)
+    kosdaq = get_price_info("^KQ11", kr_live)
 
-    # =====================
-    # 환율
-    # =====================
-    usdkrw = get_price("KRW=X", True)
+    # ===== 환율 =====
+    usdkrw = get_price_info("KRW=X", True)
 
-    # =====================
-    # 금 (국제)
-    # =====================
-    gold_usd = get_price("GC=F", True)
+    # ===== 금 =====
+    gold = get_price_info("GC=F", True)
 
-    gold_krw_oz = None
-    if gold_usd and usdkrw:
-        gold_krw_oz = round(gold_usd * usdkrw, 0)
+    gold_don = "조회불가"
+    if gold and usdkrw:
+        gold_usd, _ = gold
+        usd, _ = usdkrw
 
-    # =====================
-    # 한국 금거래소 (KRX ETF 활용)
-    # =====================
-    krx_gold = get_price("132030.KS", kr_live)
+        krw_oz = gold_usd * usd
+        gold_don = f"{round(krw_oz/8.294):,} 원/돈"
 
-    # =====================
-    # 구리
-    # =====================
-    copper = get_price("HG=F", True)
+    krx_gold = get_price_info("132030.KS", kr_live)
+    krx_gold_don = "조회불가"
+    if krx_gold:
+        krx_gold_don = f"{round(krx_gold[0]/8.294):,} 원/돈"
 
-    # =====================
+    # ===== 추가 자산 =====
+    copper = get_price_info("HG=F", True)
+    oil = get_price_info("CL=F", True)          # WTI
+    btc = get_price_info("BTC-USD", True)       # 비트코인
+
     # 금리 (수동)
-    # =====================
     us_rate = "3.75%"
     kr_rate = "2.50%"
 
@@ -120,24 +131,29 @@ def main():
         f"📊 시장 요약 ({now})\n\n"
 
         f"🇺🇸 미국\n"
-        f"S&P500 : {fmt(sp500)} 🔵\n"
-        f"NASDAQ : {fmt(nasdaq)} 🔵\n"
+        f"S&P500 : {fmt(sp500)}\n"
+        f"NASDAQ : {fmt(nasdaq)}\n"
         f"기준금리(Fed) : {us_rate}\n\n"
 
         f"🇰🇷 한국\n"
-        f"KOSPI : {fmt(kospi)} 🔴\n"
-        f"KOSDAQ : {fmt(kosdaq)} 🔴\n"
+        f"KOSPI : {fmt(kospi)}\n"
+        f"KOSDAQ : {fmt(kosdaq)}\n"
         f"기준금리(BoK) : {kr_rate}\n\n"
 
         f"💱 환율\n"
         f"USD/KRW : {fmt(usdkrw)}\n\n"
 
-        f"🥇 금 시세\n"
-        f"국제 : {fmt(gold_usd)} USD/oz  (≈ {fmt(gold_krw_oz)} 원/oz)\n"
-        f"한국(KRX) : {fmt(krx_gold)} 원\n\n"
+        f"🥇 금\n"
+        f"국제 : {fmt(gold)}\n"
+        f"1돈 환산 : {gold_don}\n"
+        f"한국(KRX) : {krx_gold_don}\n\n"
 
-        f"🔶 구리 시세\n"
-        f"{fmt(copper)} USD/lb"
+        f"🔶 원자재\n"
+        f"구리 : {fmt(copper)}\n"
+        f"유가(WTI) : {fmt(oil)}\n\n"
+
+        f"🪙 암호화폐\n"
+        f"Bitcoin : {fmt(btc)}"
     )
 
     send_telegram(message)
