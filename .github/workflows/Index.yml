@@ -27,6 +27,12 @@ jobs:
         run: |
           pip install yfinance requests
 
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install yfinance pandas openpyxl requests beautifulsoup4 python-telegram-bot
+
+
       - name: Run Index bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
