@@ -152,8 +152,8 @@ def main():
         f"{kosdaq:,.0f}" if kosdaq else "0",
         f"{sp500:,.0f}" if sp500 else "0",
         f"{nasdaq:,.0f}" if nasdaq else "0",
-        f"{gold_krw_don:,.0f}원/돈" if gold_krw_don else "0",
-        f"{silver_krw_don:,.0f}원/돈" if silver_krw_don else "0",
+        f"{gold_krw_don:,.0f}won/don" if gold_krw_don else "0",
+        f"{silver_krw_don:,.0f}won/don" if silver_krw_don else "0",
         f"{copper_usd:,.2f}USD/lb" if copper_usd else "0",
         f"{oil_usd:,.2f}USD/bbl" if oil_usd else "0",
         f"${btc_usd:,.0f}" if btc_usd else "0"
