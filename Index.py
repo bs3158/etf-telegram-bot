@@ -46,38 +46,46 @@ def get_price(ticker):
 # =============================
 def get_indicator(change):
     if change is None: return "-"
-    if change > 0: return "⬆️" # 상승: 빨간색 계열 위쪽 화살표
-    if change < 0: return "⬇️" # 하락: 파란색 계열 아래쪽 화살표
+    if change > 0: return "⬆️"
+    if change < 0: return "⬇️"
     return "-"
 
 def fmt(val, unit="", change=None):
     if val is None: return "조회 불가"
-    # 소수점 2자리까지 표시 (금액 성격에 따라 조정 가능)
     formatted_val = f"{val:,.2f}" if val < 1000 else f"{val:,.0f}"
-    
     if change is None: return f"<b>{formatted_val} {unit}</b>"
-    
     indicator = get_indicator(change)
     return f"<b>{formatted_val} {unit}</b> ({change:+.2f}% {indicator})"
 
 # =============================
-# 그래프 생성
+# 그래프 생성 (가격 표시 추가)
 # =============================
-def create_chart(labels, values):
-    plt.figure(figsize=(10, 6))
-    # 상승 빨강(#ff4d4d), 하락 파랑(#4d94ff)
+def create_chart(labels, values, prices):
+    plt.figure(figsize=(12, 7))
     colors = ['#ff4d4d' if v > 0 else '#4d94ff' if v < 0 else '#808080' for v in values]
     
     bars = plt.bar(labels, values, color=colors)
     plt.axhline(0, color='black', linewidth=0.8)
-    plt.title("Market Change Rate (%)", fontsize=15, fontweight='bold')
+    plt.title("Market Change Rate (%) & Current Price", fontsize=15, fontweight='bold')
     plt.ylabel("Change (%)")
     plt.grid(axis='y', linestyle='--', alpha=0.5)
 
-    for bar in bars:
+    # 막대 위/아래에 정보 표시
+    for bar, val, price in zip(bars, values, prices):
         yval = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width()/2, yval, f"{yval:+.2f}%", 
-                 va='bottom' if yval >= 0 else 'top', ha='center', fontsize=10, fontweight='bold')
+        
+        # 1. 증감률(%) 표시 (막대 끝 부분)
+        plt.text(bar.get_x() + bar.get_width()/2, yval, f"{val:+.2f}%", 
+                 va='bottom' if yval >= 0 else 'top', ha='center', 
+                 fontsize=10, fontweight='bold')
+        
+        # 2. 현재 가격 표시 (막대 중간 또는 0선 근처)
+        # 텍스트가 겹치지 않도록 yval의 위치에 따라 높낮이 조절
+        price_y_pos = yval / 2 if abs(yval) > 2 else (1.5 if yval >= 0 else -1.5)
+        plt.text(bar.get_x() + bar.get_width()/2, price_y_pos, f"{price}", 
+                 va='center', ha='center', fontsize=9, 
+                 fontweight='bold', color='black',
+                 bbox=dict(facecolor='white', alpha=0.6, edgecolor='none', pad=1))
 
     img_buf = io.BytesIO()
     plt.savefig(img_buf, format='png', bbox_inches='tight')
@@ -132,11 +140,26 @@ def main():
         f"₿ 비트코인 : {fmt(btc_usd, 'USD', btc_ch)}"
     )
 
-    # 그래프 데이터 구성
+    # 그래프 데이터 구성 (가격 포맷팅 포함)
     labels = ['KOSPI', 'KOSDAQ', 'S&P500', 'NASDAQ', 'Gold', 'Silver', 'Copper', 'Oil', 'BTC']
+    
+    # 증감률 데이터
     values = [v if v is not None else 0 for v in [ko_ch, kq_ch, sp_ch, na_ch, gold_ch, silver_ch, cu_ch, oil_ch, btc_ch]]
+    
+    # 표시할 가격 데이터 (단위 포함)
+    chart_prices = [
+        f"{kospi:,.0f}" if kospi else "0",
+        f"{kosdaq:,.0f}" if kosdaq else "0",
+        f"{sp500:,.0f}" if sp500 else "0",
+        f"{nasdaq:,.0f}" if nasdaq else "0",
+        f"{gold_krw_don:,.0f}원/돈" if gold_krw_don else "0",
+        f"{silver_krw_don:,.0f}원/돈" if silver_krw_don else "0",
+        f"{copper_usd:,.2f}USD/lb" if copper_usd else "0",
+        f"{oil_usd:,.2f}USD/bbl" if oil_usd else "0",
+        f"${btc_usd:,.0f}" if btc_usd else "0"
+    ]
 
-    chart_img = create_chart(labels, values)
+    chart_img = create_chart(labels, values, chart_prices)
     send_telegram(message, chart_img)
 
 if __name__ == "__main__":
