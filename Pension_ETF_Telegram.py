@@ -202,8 +202,27 @@ def run_report():
     # 그래프
     # =========================
     plt.figure(figsize=(6, 4))
-    plt.bar(totals.keys(), [v["now"] for v in totals.values()])
+    
+    # 계좌 이름과 현재 평가액 데이터 추출
+    acc_names = list(totals.keys())
+    acc_values = [v["now"] for v in totals.values()]
+    
+    # 막대 그래프 생성
+    bars = plt.bar(acc_names, acc_values)
     plt.title("Total Value by Accounts")
+    plt.ylabel("won") # y축 단위 표시
+
+    # 각 막대 위에 평가금액 텍스트 추가
+    for b in bars:
+        height = b.get_height()
+        plt.text(
+            b.get_x() + b.get_width() / 2, # x축 위치 (막대 중앙)
+            height,                        # y축 위치 (막대 상단)
+            f"{height:,.0f} won",          # 표시할 텍스트 (천 단위 콤마)
+            ha="center",                   # 가로 정렬: 중앙
+            va="bottom"                    # 세로 정렬: 하단 (막대 바로 위)
+        )
+
     plt.tight_layout()
     plt.savefig(GRAPH_FILE)
     plt.close()
@@ -213,3 +232,4 @@ def run_report():
 
 if __name__ == "__main__":
     run_report()
+
