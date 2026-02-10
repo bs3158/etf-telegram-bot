@@ -26,10 +26,9 @@ PRINCIPAL = 41_180_360
 # =========================
 portfolio = [
     {"name": "TIGER KRX 금현물", "code": "0072R0", "qty": 878, "buy": 9932},
-    {"name": "KIWOOM 국고채10년", "code": "148070", "qty": 76, "buy": 115909},
     {"name": "KODEX 200TR", "code": "278530", "qty": 575, "buy": 15176},
     {"name": "TIGER 미국 S&P500", "code": "360750", "qty": 413, "buy": 21355},
-    {"name": "ACE 미국달러SOFR금리(합성)", "code": "456880", "qty": 759, "buy": 11582},
+    {"name": "KODEX 200 타켓 위클리 커버드콜", "code": "498400", "qty": 1029, "buy": 17068},
 ]
 
 # =========================
@@ -154,3 +153,4 @@ def run_report():
 # =========================
 if __name__ == "__main__":
     run_report()
+
