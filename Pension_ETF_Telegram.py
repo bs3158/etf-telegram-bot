@@ -31,19 +31,16 @@ if os.path.exists(font_path):
 # 포트폴리오
 # =========================
 portfolio = [
-    {"account": "IRP", "name": "ACE 미국 S&P500", "code": "360200", "qty": 41, "buy": 24765},
-    {"account": "IRP", "name": "ACE 미국 나스닥100 미국채 혼합", "code": "438100", "qty": 88, "buy": 14621},
-    {"account": "IRP", "name": "TIGER 미국 배당 다우존스", "code": "458730", "qty": 84, "buy": 13100},
+    {"account": "IRP", "name": "TIGER 미국 배당 다우존스", "code": "458730", "qty": 85, "buy": 13117},
+    {"account": "IRP", "name": "ACE 미국 나스닥100 미국채 혼합 50 액티브", "code": "438100", "qty": 88, "buy": 14621},
+    {"account": "IRP", "name": "KODEX 200 TR", "code": "278530", "qty": 30, "buy": 28600},
 
     {"account": "Pension", "name": "TIGER KRX 금현물", "code": "0072R0", "qty": 197, "buy": 12211},
-    {"account": "Pension", "name": "KIWOOM 국고채10년", "code": "148070", "qty": 15, "buy": 113824},
-    {"account": "Pension", "name": "KODEX 200TR", "code": "278530", "qty": 153, "buy": 19754},
+    {"account": "Pension", "name": "KODEX 미국 배당 커버드콜 액티브", "code": "441640", "qty": 587, "buy": 13208},
     {"account": "Pension", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 128, "buy": 23556},
-    {"account": "Pension", "name": "ACE 미국달러SOFR금리(합성)", "code": "456880", "qty": 144, "buy": 11863},
 
-    {"account": "ISA", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 6, "buy": 25045},
     {"account": "ISA", "name": "TIGER 미국나스닥100", "code": "133690", "qty": 2, "buy": 164130},
-    {"account": "ISA", "name": "TIGER 200", "code": "102110", "qty": 3, "buy": 70510},
+    {"account": "ISA", "name": "KODEX 금융 고배당 TOP10 타겟 위클리 커버드콜", "code": "498410", "qty": 28, "buy": 14260},
 ]
 
 # =========================
