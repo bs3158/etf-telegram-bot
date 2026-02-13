@@ -216,15 +216,18 @@ def report_three_women():
 def report_pension():
     portfolio = [
         ("IRP", "ACE 미국 나스닥100 미국채 혼합 50 액티브", "438100", 88, 14621),
-        ("IRP", "KODEX 200 TR", "278530", 36, 28325),
         ("IRP", "TIGER 미국 S&P500", "360750", 50, 24485),
+        ("IRP", "KODEX 200 TR", "278530", 36, 28325),        
 
-        ("TAX Pension", "TIGER KRX 금현물", "0072R0", 197, 12211),
-        ("TAX Pension", "KODEX 200TR", "278530", 155, 29532),
-        ("TAX Pension", "TIGER 미국 S&P500", "360750", 128, 23556),
-        ("TAX Pension", "TIGER 미국 나스닥100", "133690", 17, 158065),
+        ("Non TAX Pension", "TIGER KRX 금현물", "0072R0", 197, 12211),
+        ("Non TAX Pension", "KODEX 200TR", "278530", 155, 29532),
+        ("Non TAX Pension", "TIGER 미국 S&P500", "360750", 128, 23556),
+        ("Non TAX Pension", "TIGER 미국 나스닥100", "133690", 17, 158065),
 
         ("ISA", "KODEX 미국 배당 커버드콜 액티브", "441640", 57, 12865),
+
+        ("Personal Account", "KODEX 200타겟 위클리 커버드콜", "498400", 29, 17435),
+        ("Personal Account", "KODEX 금융 고배당 Top10 타겟 위클리 커버드콜", "498410", 33, 14960),
     ]
 
     lines = [
