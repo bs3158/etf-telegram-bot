@@ -35,13 +35,15 @@ portfolio = [
     {"account": "IRP", "name": "ACE 미국 나스닥100 미국채 혼합 50 액티브", "code": "438100", "qty": 88, "buy": 14621},
     {"account": "IRP", "name": "KODEX 200 TR", "code": "278530", "qty": 36, "buy": 28325},
 
-    {"account": "Tax Pension", "name": "TIGER KRX 금현물", "code": "0072R0", "qty": 197, "buy": 12211},
-    {"account": "Tax Pension", "name": "KODEX 200TR", "code": "278530", "qty": 155, "buy": 29532},
-    {"account": "Tax Pension", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 128, "buy": 23556},
-    {"account": "Tax Pension", "name": "TIGER 미국 나스닥100", "code": "133690", "qty": 17, "buy": 158065},
+    {"account": "Non Tax Pension", "name": "TIGER KRX 금현물", "code": "0072R0", "qty": 197, "buy": 12211},
+    {"account": "Non Pension", "name": "KODEX 200TR", "code": "278530", "qty": 155, "buy": 29532},
+    {"account": "Non Pension", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 128, "buy": 23556},
+    {"account": "Non Pension", "name": "TIGER 미국 나스닥100", "code": "133690", "qty": 17, "buy": 158065},
 
-    {"account": "ISA", "name": "TIGER 미국나스닥100", "code": "133690", "qty": 2, "buy": 164130},
-    {"account": "ISA", "name": "KODEX 금융 고배당 TOP10 타겟 위클리 커버드콜", "code": "498410", "qty": 28, "buy": 14260},
+    {"account": "ISA", "name": "KODEX 미국 배당 커버드콜 액티브", "code": "441640", "qty": 57, "buy": 12865},
+
+    {"account": "Personal Account", "name": "KODEX 200타겟 위클리 커버드콜", "code": "498400", "qty": 29, "buy": 17435},
+    {"account": "Personal Account", "name": "KODEX 금융 고배당 Top10 타겟 위클리 커버드콜", "code": "498410", "qty": 33, "buy": 14960},
 ]
 
 # =========================
@@ -230,5 +232,6 @@ def run_report():
 
 if __name__ == "__main__":
     run_report()
+
 
 
