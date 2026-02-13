@@ -219,10 +219,10 @@ def report_pension():
         ("IRP", "TIGER 미국 S&P500", "360750", 50, 24485),
         ("IRP", "KODEX 200 TR", "278530", 36, 28325),        
 
-        ("Non TAX Pension", "TIGER KRX 금현물", "0072R0", 197, 12211),
-        ("Non TAX Pension", "KODEX 200TR", "278530", 155, 29532),
-        ("Non TAX Pension", "TIGER 미국 S&P500", "360750", 128, 23556),
-        ("Non TAX Pension", "TIGER 미국 나스닥100", "133690", 17, 158065),
+        ("Non Tax Pension", "TIGER KRX 금현물", "0072R0", 197, 12211),
+        ("Non Tax Pension", "KODEX 200TR", "278530", 155, 29532),
+        ("Non Tax Pension", "TIGER 미국 S&P500", "360750", 128, 23556),
+        ("Non Tax Pension", "TIGER 미국 나스닥100", "133690", 17, 158065),
 
         ("ISA", "KODEX 미국 배당 커버드콜 액티브", "441640", 57, 12865),
 
