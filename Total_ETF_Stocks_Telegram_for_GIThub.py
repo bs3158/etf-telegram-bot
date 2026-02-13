@@ -269,7 +269,7 @@ def report_pension():
     graph_labels = []
     graph_values = []
 
-    for acc in ["IRP", "Pension", "ISA"]:
+    for acc in ["IRP", "Non Tax Pension", "ISA", "Personal Account"]:
         lines.append(f"📂 [{acc} 계좌]")
         lines.append("────────────────")
 
