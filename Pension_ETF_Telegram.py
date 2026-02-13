@@ -36,9 +36,9 @@ portfolio = [
     {"account": "IRP", "name": "KODEX 200 TR", "code": "278530", "qty": 36, "buy": 28325},
 
     {"account": "Non Tax Pension", "name": "TIGER KRX 금현물", "code": "0072R0", "qty": 197, "buy": 12211},
-    {"account": "Non Pension", "name": "KODEX 200TR", "code": "278530", "qty": 155, "buy": 29532},
-    {"account": "Non Pension", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 128, "buy": 23556},
-    {"account": "Non Pension", "name": "TIGER 미국 나스닥100", "code": "133690", "qty": 17, "buy": 158065},
+    {"account": "Non Tax Pension", "name": "KODEX 200TR", "code": "278530", "qty": 155, "buy": 29532},
+    {"account": "Non Tax Pension", "name": "TIGER 미국 S&P500", "code": "360750", "qty": 128, "buy": 23556},
+    {"account": "Non Tax Pension", "name": "TIGER 미국 나스닥100", "code": "133690", "qty": 17, "buy": 158065},
 
     {"account": "ISA", "name": "KODEX 미국 배당 커버드콜 액티브", "code": "441640", "qty": 57, "buy": 12865},
 
